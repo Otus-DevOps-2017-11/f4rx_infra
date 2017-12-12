@@ -1,1 +1,1 @@
-Otus DevOops HW 5 by Aleksey Stepanenko
+Otus DevOps HW 5 by Aleksey Stepanenko
