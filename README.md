@@ -18,6 +18,8 @@ MongoDB
 • В репозиторий были закомиченными исполняемыми файлами (+x )
 ```
 
+Скрипты находятся в каталоге HW_06
+
 ```
 Дополнительное задание
 В качестве доп задания используйте созданные ранее
@@ -31,6 +33,7 @@ MongoDB
 описание репозитория (README.md)
 ```
 
+Создание ВМ с использованием startup-script-url (скрипт лежит в HW_06/startup_script.sh)
 ```bash
 gcloud compute instances create reddit-app\
   --boot-disk-size=10GB \
@@ -40,7 +43,7 @@ gcloud compute instances create reddit-app\
   --tags puma-server \
   --restart-on-failure \
   --zone=europe-west3-a \
-  --metadata "startup-script=git clone https://github.com/Otus-DevOps-2017-11/f4rx_infra.git && cd f4rx_infra && git checkout Infra-2 && ./HW_06/install_ruby.sh && ./HW_06/install_mongodb.sh && ./HW_06/deploy.sh"
+  --metadata "startup-script-url=https://raw.githubusercontent.com/Otus-DevOps-2017-11/f4rx_infra/Infra-2/HW_06/startup_script.sh"
 ```
 
 # HW 5
