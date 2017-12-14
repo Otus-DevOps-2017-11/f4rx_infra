@@ -13,4 +13,4 @@ trap err_report ERR
 echo "Executing \`apt update\`"
 sudo apt update
 echo "Executing \`apt install -y ruby-full ruby-bundler build-essential\`"
-apt install -y ruby-full ruby-bundler build-essential
+sudo apt install -y ruby-full ruby-bundler build-essential
