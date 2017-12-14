@@ -15,6 +15,7 @@ if [[ $EUID -eq 0 ]]; then
    exit 1
 fi
 
+cd ~/
 git clone https://github.com/Otus-DevOps-2017-11/reddit.git
 cd reddit/
 bundle install
