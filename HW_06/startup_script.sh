@@ -9,7 +9,9 @@ cd f4rx_infra && \
 git checkout Infra-2 && \
 ./HW_06/install_ruby.sh && \
 ./HW_06/install_mongodb.sh && \
-./HW_06/deploy.sh
+./HW_06/deploy.sh && \
+touch /tmp/puma_successfully_installed.txt
+
 
 EOF
 
