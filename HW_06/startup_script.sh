@@ -10,7 +10,8 @@ git checkout Infra-2 && \
 ./HW_06/install_ruby.sh && \
 ./HW_06/install_mongodb.sh && \
 ./HW_06/deploy.sh && \
-touch /tmp/puma_successfully_installed.txt
+touch /tmp/puma_successfully_installed.txt || \
+touch /tmp/puma_error_during_intallation.txt
 
 
 EOF
