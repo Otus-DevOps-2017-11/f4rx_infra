@@ -17,8 +17,11 @@ MongoDB
 • Выполняли необходимые действия
 • В репозиторий были закомиченными исполняемыми файлами (+x )
 ```
-
 Скрипты находятся в каталоге HW_06
+Запуск приложения вынесен в скрипт puma_startup.sh, чтобы обеспечить запуск под непривилегированным пользователем puma.
+Нехорошо вешать приложение в интернет с рутовыми правами  
+
+
 
 ```
 Дополнительное задание
@@ -33,7 +36,22 @@ MongoDB
 описание репозитория (README.md)
 ```
 
-Создание ВМ с использованием startup-script-url (скрипт лежит в HW_06/startup_script.sh)
+Запуск приложения происходит от не системного пользователя puma
+
+Вариант 1 для запуска с использованием metadata-from-file startup-script:
+```bash
+gcloud compute instances create reddit-app2 \
+--boot-disk-size=10GB \
+--image-family ubuntu-1604-lts \
+--image-project=ubuntu-os-cloud \
+--machine-type=g1-small \
+--tags puma-server \
+--restart-on-failure \
+--zone=europe-west1-b \
+ --metadata-from-file startup-script=HW_06/startup_script.sh
+```
+
+Вариант 2 с использованием startup-script-url 
 ```bash
 gcloud compute instances create reddit-app\
   --boot-disk-size=10GB \
