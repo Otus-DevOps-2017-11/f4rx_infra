@@ -1,7 +1,6 @@
 #!/bin/bash
 
-cat > /tmp/install_puma.sh << 'EOF'
-#!/bin/bash
+useradd -m puma
 
 cd ~/
 git clone https://github.com/Otus-DevOps-2017-11/f4rx_infra.git && \
@@ -9,11 +8,10 @@ cd f4rx_infra && \
 git checkout Infra-2 && \
 ./HW_06/install_ruby.sh && \
 ./HW_06/install_mongodb.sh && \
-./HW_06/deploy.sh && \
-touch /tmp/puma_successfully_installed.txt || \
-touch /tmp/puma_error_during_intallation.txt
+./HW_06/deploy.sh "~puma" && \
+cp ./HW_06/puma_startup.sh /tmp/ && \
 
+sudo -i -u puma /tmp/puma_startup.sh && \
 
-EOF
-
-sudo -i -u astepanenko bash /tmp/install_puma.sh
+echo "0" > /tmp/puma_install_status || \
+echo "1" > /tmp/puma_install_status
