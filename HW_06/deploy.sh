@@ -10,11 +10,6 @@ err_report() {
 
 trap err_report ERR
 
-if [[ $EUID -eq 0 ]]; then
-   echo "This script must be run as unprivileged user" 1>&2
-   exit 1
-fi
-
 if [ -z "$1" ]
 then
     WORK_DIR="~/"
