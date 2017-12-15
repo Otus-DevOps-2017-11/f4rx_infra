@@ -11,6 +11,7 @@ git checkout Infra-2 && \
 ./HW_06/deploy.sh "/home/puma" && \
 cp ./HW_06/puma_startup.sh /tmp/ && \
 
+chown puma:puma /home/puma/reddit && \
 sudo -i -u puma /tmp/puma_startup.sh && \
 
 echo "0" > /tmp/puma_install_status || \
