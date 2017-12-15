@@ -11,6 +11,7 @@ err_report() {
 trap err_report ERR
 
 echo "Start daemon"
+cd reddit
 puma -d
 echo "Check puma server"
 sleep 3

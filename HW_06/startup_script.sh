@@ -8,7 +8,7 @@ cd f4rx_infra && \
 git checkout Infra-2 && \
 ./HW_06/install_ruby.sh && \
 ./HW_06/install_mongodb.sh && \
-./HW_06/deploy.sh "~puma" && \
+./HW_06/deploy.sh "/home/puma" && \
 cp ./HW_06/puma_startup.sh /tmp/ && \
 
 sudo -i -u puma /tmp/puma_startup.sh && \
