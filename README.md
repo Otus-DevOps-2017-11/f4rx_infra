@@ -1,4 +1,54 @@
 # Aleksey Stepanenko
+
+# HW 7
+
+## ДЗ 1
+Сборка образа packer'ом (тут и далее в директории packer)
+```bash
+packer build \
+-var 'proj_id=infra-188921' \
+-var 'source_image_family=ubuntu-1604-lts' \
+-var 'machine_type=f1-micro' ubuntu16.json
+```
+или использовать переменные из файла variables.json (за основу взять variables.json.example, указав proj_id)
+```bash
+packer build -var-file=variables.json ubuntu16.json
+```
+
+## ДЗ *
+В данном ДЗ я так же поставил перед собой цель собирать образ не на основе Ubuntu, а на основе 
+reddit-base подготовленного в первом ДЗ. Поэтому у меня жестко забит в json **"source_image_family":"reddit-base"**  
+Опять же так было проще для дебага.  
+
+Запуск приложения сделан через unit-файл из под пользователя puma (см. puma.service) 
+```bash
+packer build -var 'proj_id=infra-188921' immutable.json
+```
+
+## ДЗ **
+Созданием ВМ из командной строки с запущенным приложением. Аргументом задается имя ВМ, по-дефолту reddit-app-hw-07:
+```bash
+../config-scripts/create-reddit-vm.sh reddit-app-hw-07
+```
+
+или
+
+```bash
+gcloud compute instances create reddit-app-hw-07 \
+--boot-disk-size=10GB \
+--tags puma-server \
+--restart-on-failure \
+--zone=europe-west1-b \
+--machine-type=f1-micro \
+--image-family reddit-full
+```
+
+Проверка
+```bash
+IP=`gcloud compute instances describe reddit-app-hw-07 --zone=europe-west1-b | grep natIP | awk '{print $2}'`; curl -sNL "http://${IP}:9292" | head
+```
+
+
 # HW 6
 
 ```
