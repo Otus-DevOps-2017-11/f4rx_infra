@@ -8,9 +8,10 @@
 packer build \
 -var 'proj_id=infra-188921' \
 -var 'source_image_family=ubuntu-1604-lts' \
--var 'machine_type=f1-micro' ubuntu16.json
+ubuntu16.json
 ```
-или использовать переменные из файла variables.json (за основу взять variables.json.example, указав proj_id)
+или использовать переменные из файла variables.json (за основу взять variables.json.example, 
+указав proj_id и переопределив другие перемеменные при необходимости)
 ```bash
 packer build -var-file=variables.json ubuntu16.json
 ```
@@ -18,9 +19,11 @@ packer build -var-file=variables.json ubuntu16.json
 ## ДЗ *
 В данном ДЗ я так же поставил перед собой цель собирать образ не на основе Ubuntu, а на основе 
 reddit-base подготовленного в первом ДЗ. Поэтому у меня жестко забит в json **"source_image_family":"reddit-base"**  
-Опять же так было проще для дебага.  
+Опять же так было проще для отладки, собирается не весь образ с нуля, а с последнего успешного этапа (reddit-base), 
+что экономит время.
 
-Запуск приложения сделан через unit-файл из под пользователя puma (см. puma.service) 
+Запуск приложения сделан через unit-файл из под пользователя puma (см. puma.service), т.к. запускать приложение 
+из под пользователя, у которого его sudo ALL без пароля, считаю не безопасным.
 ```bash
 packer build -var 'proj_id=infra-188921' immutable.json
 ```
@@ -46,6 +49,17 @@ gcloud compute instances create reddit-app-hw-07 \
 Проверка
 ```bash
 IP=`gcloud compute instances describe reddit-app-hw-07 --zone=europe-west1-b | grep natIP | awk '{print $2}'`; curl -sNL "http://${IP}:9292" | head
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<meta content='IE=Edge,chrome=1' http-equiv='X-UA-Compatible'>
+<meta content='width=device-width, initial-scale=1.0' name='viewport'>
+<title>Monolith Reddit :: All posts</title>
+<link crossorigin='anonymous' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css' integrity='sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7' rel='stylesheet' type='text/css'>
+<link crossorigin='anonymous' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css' integrity='sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r' rel='stylesheet' type='text/css'>
+<script crossorigin='anonymous' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js' integrity='sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS'></script>
 ```
 
 
