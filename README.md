@@ -1,4 +1,19 @@
 # Aleksey Stepanenko
+# HW 8
+
+Использую f1-micro вместо g1-small
+
+Все команды выполняются в директории _terraform_
+
+> 2. Определите input переменную для задания версии провайдера "google"; 
+
+**О.** Вопрос с подвохом, из документации:
+>Interpolation is supported only for the per-provider configuration arguments. It is not supported for the special alias and version arguments.
+
+
+
+
+
 # HW 6
 
 ```
