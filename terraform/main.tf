@@ -6,6 +6,7 @@ provider "google" {
 
 data "template_file" "ssh_keys" {
   template = "$${key1}\n$${key2}\n$${key3}"
+
   vars {
     key1 = "appuser:${file(var.public_key_path)}"
     key2 = "appuser1:${file(var.public_key_path)}"
@@ -19,7 +20,7 @@ resource "google_compute_instance" "app" {
   zone         = "${var.app_zone}"
 
   metadata {
-//    sshKeys = "appuser:${file(var.public_key_path)}\nappuser1:${file(var.public_key_path)}"
+    //    sshKeys = "appuser:${file(var.public_key_path)}\nappuser1:${file(var.public_key_path)}"
     sshKeys = "${data.template_file.ssh_keys.rendered}"
   }
 
