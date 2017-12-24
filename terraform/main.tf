@@ -4,13 +4,23 @@ provider "google" {
   region  = "${var.region}"
 }
 
+data "template_file" "ssh_keys" {
+  template = "$${key1}\n$${key2}\n$${key3}"
+  vars {
+    key1 = "appuser:${file(var.public_key_path)}"
+    key2 = "appuser1:${file(var.public_key_path)}"
+    key3 = "appuser2:${file(var.public_key_path)}"
+  }
+}
+
 resource "google_compute_instance" "app" {
   name         = "reddit-app"
-  machine_type = "f1-micro"
+  machine_type = "g1-small"
   zone         = "${var.app_zone}"
 
   metadata {
-    sshKeys = "appuser:${file(var.public_key_path)}"
+//    sshKeys = "appuser:${file(var.public_key_path)}\nappuser1:${file(var.public_key_path)}"
+    sshKeys = "${data.template_file.ssh_keys.rendered}"
   }
 
   # определение загрузочного диска

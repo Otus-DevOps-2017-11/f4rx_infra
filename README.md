@@ -1,9 +1,10 @@
 # Aleksey Stepanenko
 # HW 8
 
-Использую f1-micro вместо g1-small
 
 Все команды выполняются в директории _terraform_
+
+## ДЗ 
 
 > 2. Определите input переменную для задания версии провайдера "google"; 
 
@@ -11,7 +12,32 @@
 >Interpolation is supported only for the per-provider configuration arguments. It is not supported for the special alias and version arguments.
 
 
+## ДЗ *
+> Какие проблемы вы обнаружили?
 
+Ключи нужно записывать в одну строку и использовать \n в качестве разделителя, 3 ключа уже не будут поменщаться на экране
+Т.к. в терраформе нет встроенных механизмов по контатенации строк, решил это через data inline template
+```hcl-terraform
+data "template_file" "ssh_keys" {
+  template = "$${key1}\n$${key2}"
+  vars {
+    key1 = "appuser:${file(var.public_key_path)}"
+    key2 = "appuser1:${file(var.public_key_path)}"
+  }
+}
+...
+  metadata {
+    sshKeys = "${data.template_file.ssh_keys.rendered}"
+  }
+``` 
+
+Если в проекте в GCP добавить ssh ключ, когда  уже есть развернутая ВМ, то он не добавится в ВМ.
+Есди сделать destroy/apply, то пользователь appuser_web не появится на сервере. 
+
+Нужно все поддерживать через terraform или подключать паппет/LDAP
+
+
+## ДЗ **
 
 
 # HW 6
