@@ -6,9 +6,27 @@
 
 ## ДЗ 
 
+Все изменения сделаны в **main.tf** согласно ТЗ.
+
+Каких-то сложноестей в основной части ДЗ не возникло. Но хочется отметить, вто в переменных нельзя сделать как-то так:
+```hcl-terraform
+variable app_zone {
+  description = "App zone"
+  default     = "${var.region}-c"
+}
+```
+ 
+Используемые команды:
+```hcl-terraform
+terraform plan
+terraform apply  -auto-approve=true
+terraform show
+terraform output
+```
+
 > 2. Определите input переменную для задания версии провайдера "google"; 
 
-**О.** Вопрос с подвохом, из документации:
+**О.** Вопрос с подвохом, версию задать нельзя. Из документации:
 >Interpolation is supported only for the per-provider configuration arguments. It is not supported for the special alias and version arguments.
 
 
@@ -34,12 +52,33 @@ data "template_file" "ssh_keys" {
 Если в проекте в GCP добавить ssh ключ, когда  уже есть развернутая ВМ, то он не добавится в ВМ.
 Есди сделать destroy/apply, то пользователь appuser_web не появится на сервере. 
 
-Нужно все поддерживать через terraform или подключать паппет/LDAP
+Нужно все целиком поддерживать либо через terraform или подключать паппет/LDAP
 
 
 ## ДЗ **
+В main.tf добавлено count = 2 в ресурсе ВМ, из-за чего поменялись пути к переменным.
 
+Это ДЗ вынесено в файл lb.tf - создание группы и создание балансера. В целом нужно больше попрактиковаться с балансировщиками.
+Хочется отметить, что я бы сделал и попрактиковался бы:
+1. Разворачивание ВМ из готового образа (reddit-full) и группировка по этому признаку
+1. Прочитать больше про LB в целом
+1. Проверка health-статусов из консоли _gcloud compute backend-services get-health_
+1. Почитать больше про path_matcher и host_rule
 
+Блок host_rule и path_matcher оставил закоментированным для себя. По-умолчанию создается:
+```hcl-terraform
+Хосты	Пути	Серверная ВМ
+Все незаданные (по умолчанию)	Все незаданные (по умолчанию)	default-backend
+```
+
+Проверять можно так:
+```bash
+$ curl -sLN `terraform output lb_ip` | head -4
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+```
 
 # HW 7
 

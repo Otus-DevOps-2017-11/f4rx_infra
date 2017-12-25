@@ -9,9 +9,10 @@ variable region {
 
 variable app_zone {
   description = "App zone"
+
   # Я не могу тут указать что-то вроед такого:
   # default     = "${var.region}-c"
-  default     = "europe-west1-c"
+  default = "europe-west1-c"
 }
 
 variable disk_image {
