@@ -22,6 +22,7 @@ terraform plan
 terraform apply  -auto-approve=true
 terraform show
 terraform output
+terraform fmt
 ```
 
 > 2. Определите input переменную для задания версии провайдера "google"; 
