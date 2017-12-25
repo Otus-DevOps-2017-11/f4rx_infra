@@ -15,9 +15,10 @@ data "template_file" "ssh_keys" {
 }
 
 resource "google_compute_instance" "app" {
-  # Создаем два экземпляра, теперь у ним нужно будет по индексам:
+  # Создаем два экземпляра, теперь к ним нужно обрщаться по индексам:
   # "${google_compute_instance.app.0.self_link}",
   # "${google_compute_instance.app.1.self_link}",
+  # "${google_compute_instance.app.*.self_link}",
   count = 2
 
   name         = "reddit-app-${count.index}"
