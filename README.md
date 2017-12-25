@@ -72,13 +72,67 @@ data "template_file" "ssh_keys" {
 Все незаданные (по умолчанию)	Все незаданные (по умолчанию)	default-backend
 ```
 
-Проверять можно так:
+После запуска **terraform apply  -auto-approve=true** нужно подождать пару минут, проверить можно как-то так:
+
 ```bash
-$ curl -sLN `terraform output lb_ip` | head -4
+# OK
+$ curl -v -sLN `terraform output lb_ip` 2>&1 | head -30
+* Rebuilt URL to: 35.190.65.227/
+*   Trying 35.190.65.227...
+* TCP_NODELAY set
+* Connected to 35.190.65.227 (35.190.65.227) port 80 (#0)
+> GET / HTTP/1.1
+> Host: 35.190.65.227
+> User-Agent: curl/7.54.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Content-Type: text/html;charset=utf-8
+< X-XSS-Protection: 1; mode=block
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: SAMEORIGIN
+< Set-Cookie: rack.session=BAh7CEkiD3Nlc3Npb25faWQGOgZFVEkiRTQ2ZjljMTBhNzRlOGRhMzllN2E5%0ANzJlZTBkODJiMzYxMmUzZTdiN2FlM2UyMjk2ZmEzYzJkMDU5MWViZjQ0ZWYG%0AOwBGSSIJY3NyZgY7AEZJIjFGNU84ajVoUkZSSjhSOVpOZXozUkZGTG1rckNS%0AcHBxUE50bEQxeG9zTkM0PQY7AEZJIg10cmFja2luZwY7AEZ7B0kiFEhUVFBf%0AVVNFUl9BR0VOVAY7AFRJIi01NmMxYTdkOWI2YjdjZjUyMTdkNTk1YjM4MjVm%0AZDc4MjI5MmIyNGNjBjsARkkiGUhUVFBfQUNDRVBUX0xBTkdVQUdFBjsAVEki%0ALWRhMzlhM2VlNWU2YjRiMGQzMjU1YmZlZjk1NjAxODkwYWZkODA3MDkGOwBG%0A--82688938b41366df5320ca8f2c38f156c5cda770; path=/; HttpOnly
+< Content-Length: 1861
+< Date: Mon, 25 Dec 2017 09:21:07 GMT
+< Via: 1.1 google
+<
+{ [1861 bytes data]
 <!DOCTYPE html>
 <html lang='en'>
 <head>
 <meta charset='utf-8'>
+<meta content='IE=Edge,chrome=1' http-equiv='X-UA-Compatible'>
+<meta content='width=device-width, initial-scale=1.0' name='viewport'>
+<title>Monolith Reddit :: All posts</title>
+<link crossorigin='anonymous' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css' integrity='sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7' rel='stylesheet' type='text/css'>
+<link crossorigin='anonymous' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css' integrity='sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r' rel='stylesheet' type='text/css'>
+<script crossorigin='anonymous' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js' integrity='sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS'></script>
+
+```
+
+```bash
+# Не ОК. Могут наблюдаться 404 или 502
+$ curl -v -sLN `terraform output lb_ip` 2>&1 | head -20
+* Rebuilt URL to: 35.190.65.227/
+*   Trying 35.190.65.227...
+* TCP_NODELAY set
+* Connected to 35.190.65.227 (35.190.65.227) port 80 (#0)
+> GET / HTTP/1.1
+> Host: 35.190.65.227
+> User-Agent: curl/7.54.0
+> Accept: */*
+>
+< HTTP/1.1 404 Not Found
+< Content-Type: text/html; charset=UTF-8
+< Referrer-Policy: no-referrer
+< Content-Length: 1561
+< Date: Mon, 25 Dec 2017 09:18:18 GMT
+<
+{ [1263 bytes data]
+<!DOCTYPE html>
+<html lang=en>
+  <meta charset=utf-8>
+  <meta name=viewport content="initial-scale=1, minimum-scale=1, width=device-width">
 ```
 
 # HW 7
