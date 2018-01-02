@@ -4,38 +4,21 @@ provider "google" {
   region  = "${var.region}"
 }
 
-data "template_file" "ssh_keys" {
-  template = "$${key1}\n$${key2}\n$${key3}"
-
-  vars {
-    key1 = "appuser:${file(var.public_key_path)}"
-    key2 = "appuser1:${file(var.public_key_path)}"
-    key3 = "appuser2:${file(var.public_key_path)}"
-  }
-}
-
 resource "google_compute_instance" "app" {
-  # Создаем два экземпляра, теперь к ним нужно обрщаться по индексам:
-  # "${google_compute_instance.app.0.self_link}",
-  # "${google_compute_instance.app.1.self_link}",
-  # "${google_compute_instance.app.*.self_link}",
-  count = 2
+
+  count = 1
 
   name         = "reddit-app-${count.index}"
   machine_type = "g1-small"
   zone         = "${var.app_zone}"
 
   metadata {
-    //    sshKeys = "appuser:${file(var.public_key_path)}\nappuser1:${file(var.public_key_path)}"
-    sshKeys = "${data.template_file.ssh_keys.rendered}"
+    sshKeys = "appuser:${file(var.public_key_path)}"
   }
 
   # определение загрузочного диска
   boot_disk {
     initialize_params {
-      # другой вариант:
-      # image = "reddit-base-1513976435"
-      # image = "reddit-base"
       image = "${var.disk_image}"
     }
   }
