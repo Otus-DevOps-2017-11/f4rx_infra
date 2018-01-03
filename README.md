@@ -1,5 +1,48 @@
 # Aleksey Stepanenko
-# HW 8
+Table of Contents
+=================
+
+   * [HW 9 Terraform-2](#hw-9-terraform-2)
+      * [Несколько VM](#Несколько-vm)
+   * [HW 8 Terraform-1](#hw-8-terraform-1)
+      * [ДЗ](#ДЗ)
+      * [ДЗ *](#ДЗ-)
+      * [ДЗ **](#ДЗ--1)
+   * [HW 7 Packer](#hw-7-packer)
+      * [ДЗ 1](#ДЗ-1)
+      * [ДЗ *](#ДЗ--2)
+      * [ДЗ **](#ДЗ--3)
+   * [HW 6](#hw-6)
+   * [HW 5](#hw-5)
+      * [Otus DevOps HW 5 by Aleksey Stepanenko](#otus-devops-hw-5-by-aleksey-stepanenko)
+         * [Описание стенда](#Описание-стенда)
+         * [ДЗ со слайда 36](#ДЗ-со-слайда-36)
+
+
+# HW 9 Terraform-2
+
+Используемые команды:
+```bash
+# установка модулей
+terraform get
+```
+
+## Несколько VM
+Собираем пакером:
+```bash
+cd packer
+packer build -var-file=variables.json app.json
+packer build -var-file=variables.json db.json
+```
+
+## PS
+P.S. Добавлен скрипт https://github.com/ekalinin/github-markdown-toc для построения меню для упрашения навигация
+по старому материалу, т.к. текста в Readme уже много
+
+P.P.S. Нельзя пользоваться пакером до вызова терраформа, т.к. у пакера не будет ssh к ВМ. **TODO** Нужно будет сделать 
+какой-нибудь отдельный тег для пакера с ssh и навешивать его на ВМ его во время создания образа
+
+# HW 8 Terraform-1
 
 
 Все команды выполняются в директории _terraform_
@@ -163,7 +206,7 @@ $ curl -v -sLN `terraform output lb_ip` 2>&1 | head -20
   <meta name=viewport content="initial-scale=1, minimum-scale=1, width=device-width">
 ```
 
-# HW 7
+# HW 7 Packer
 
 ## ДЗ 1
 Сборка образа packer'ом (тут и далее в директории packer)

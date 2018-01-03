@@ -15,6 +15,11 @@ variable app_zone {
   default = "europe-west1-c"
 }
 
+variable zone {
+  description = "App zone"
+  default     = "europe-west1-c"
+}
+
 variable disk_image {
   description = "Disk image"
 }
@@ -25,4 +30,14 @@ variable public_key_path {
 
 variable private_key_path {
   description = "ssh private key"
+}
+
+variable app_disk_image {
+  description = "Disk image for reddit app"
+  default     = "reddit-app-base"
+}
+
+variable db_disk_image {
+  description = "Disk image for reddit DB"
+  default     = "reddit-db-base"
 }
