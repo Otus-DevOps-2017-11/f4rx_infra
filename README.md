@@ -2,8 +2,12 @@
 Table of Contents
 =================
 
+   * [Table of Contents](#table-of-contents)
    * [HW 9 Terraform-2](#hw-9-terraform-2)
       * [Несколько VM](#Несколько-vm)
+      * [ДЗ * (google storage для хранения стейтов)](#ДЗ--google-storage-для-хранения-стейтов)
+      * [ДЗ ** (использование теплейтов системных конфигов в модулях)](#ДЗ--использование-теплейтов-системных-конфигов-в-модулях)
+      * [PS](#ps)
    * [HW 8 Terraform-1](#hw-8-terraform-1)
       * [ДЗ](#ДЗ)
       * [ДЗ *](#ДЗ-)
@@ -43,7 +47,7 @@ packer build -var-file=variables.json app.json
 packer build -var-file=variables.json db.json
 ```
 
-## ДЗ *
+## ДЗ * (google storage для хранения стейтов)
 На вкладке https://console.cloud.google.com/storage/browser?project=infra-188921 создаем сегмент (сторадж)
 TODO поискать как создать storage через gcloud
 
@@ -80,7 +84,7 @@ Lock Info:
   Info:
 ```
 
-## ДЗ **
+## ДЗ ** (использование теплейтов системных конфигов в модулях)
 Задание как обычно с подвохом, т.к. я копировал примеру из слайда, то не использовал connection, из-за чего не работал provisioner
 ```hcl-terraform
   connection {
