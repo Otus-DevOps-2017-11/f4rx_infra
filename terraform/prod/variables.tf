@@ -7,21 +7,9 @@ variable region {
   default     = "europe-west1"
 }
 
-variable app_zone {
-  description = "App zone"
-
-  # Я не могу тут указать что-то вроед такого:
-  # default     = "${var.region}-c"
-  default = "europe-west1-c"
-}
-
 variable zone {
   description = "App zone"
   default     = "europe-west1-c"
-}
-
-variable disk_image {
-  description = "Disk image"
 }
 
 variable public_key_path {
