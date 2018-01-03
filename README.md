@@ -39,6 +39,42 @@ packer build -var-file=variables.json app.json
 packer build -var-file=variables.json db.json
 ```
 
+## ДЗ *
+На вкладке https://console.cloud.google.com/storage/browser?project=infra-188921 создаем сегмент
+
+Сделано только в **stage**, создан файл backend.tf с содержимым:
+```hcl-terraform
+terraform {
+  backend "gcs" {
+    bucket = "otus-terraform-stepanenko"
+  }
+}
+```
+Можно создать минимальную конфигурацию, тогда имя бакета запросит в консоли при первом вызове `terrafom init`.
+```hcl-terraform
+terraform {
+  backend "gcs" {
+  }
+}
+```
+После этого нужно запустить `terraform init`, при этом терраформ спросит - нужно ли локальные конфиги переместить в бакет.
+```hcl-terraform
+terraform init
+```
+
+Если запустить два terraform-процесса одновременно, то сработает лок
+```bash
+Error: Error loading state: writing "gs://otus-terraform-stepanenko/default.tflock" failed: googleapi: Error 412: Precondition Failed, conditionNotMet
+Lock Info:
+  ID:        de6bec7a-ee69-6212-8ac9-82dfc8d04cce
+  Path:
+  Operation: OperationTypeApply
+  Who:       f3ex@MacBook-Pro-f3ex.local
+  Version:   0.11.1
+  Created:   2018-01-03 08:27:42.541297415 +0000 UTC
+  Info:
+```
+
 ## PS
 P.S. Добавлен скрипт https://github.com/ekalinin/github-markdown-toc для построения меню для упрашения навигация
 по старому материалу, т.к. текста в Readme уже много
