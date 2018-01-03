@@ -5,6 +5,7 @@ data "template_file" "mongod-config" {
     #mongo_listen_address = "${var.mongo_listen_address}"
     #mongo_listen_address = "${google_compute_instance.db.network_interface.0.network_ip}"
     # я не смог в конфиге монги указать IP самого инстанса
+    # В общем так делать нельзя https://github.com/terraform-providers/terraform-provider-aws/issues/2035
     mongo_listen_address = "0.0.0.0"
   }
 }

@@ -2,11 +2,14 @@
 Table of Contents
 =================
 
+   * [Aleksey Stepanenko](#aleksey-stepanenko)
    * [Table of Contents](#table-of-contents)
    * [HW 9 Terraform-2](#hw-9-terraform-2)
       * [Несколько VM](#Несколько-vm)
       * [ДЗ * (google storage для хранения стейтов)](#ДЗ--google-storage-для-хранения-стейтов)
       * [ДЗ ** (использование теплейтов системных конфигов в модулях)](#ДЗ--использование-теплейтов-системных-конфигов-в-модулях)
+         * [Основная часть](#Основная-часть)
+         * [Идея которая не взлетела](#Идея-которая-не-взлетела)
       * [PS](#ps)
    * [HW 8 Terraform-1](#hw-8-terraform-1)
       * [ДЗ](#ДЗ)
@@ -85,6 +88,7 @@ Lock Info:
 ```
 
 ## ДЗ ** (использование теплейтов системных конфигов в модулях)
+### Основная часть
 Задание как обычно с подвохом, т.к. я копировал примеру из слайда, то не использовал connection, из-за чего не работал provisioner
 ```hcl-terraform
   connection {
@@ -135,9 +139,6 @@ data "template_file" "mongod-config" {
   template = "${file("${path.module}/files/mongod.conf.tpl")}"
 
   vars {
-    #mongo_listen_address = "${var.mongo_listen_address}"
-    #mongo_listen_address = "${google_compute_instance.db.network_interface.0.network_ip}"
-    # я не смог в конфиге монги указать IP 10/8 самого инстанса
     mongo_listen_address = "0.0.0.0"
   }
 }
@@ -157,9 +158,46 @@ resource "google_compute_instance" "db" {
   }
 ```
 
-Т.е. была идея повесить могу на адрес 10/8 и резрешить доступ к БД по 10-й сети. Но я не понял пока как в теплейт в модулей передать
-IP интсанса, я ловил ошибку закольцованности пемеменных. Вообще конфигурирование я бы уже делал через коллекцию фактов в паппете + сам паппет.  
-В настоящий момент БД закрывается от мира через FW.
+### Идея которая не взлетела
+Тут была идея сделать связь между app и монгой через интернал сеть (10/8) и сделать темплейт с конфигом монги, где 
+listen будет на локальном адресе (10/8). 
+Попробовал собрать такую конструкцию, 
+```hcl-terraform
+data "template_file" "test-template" {
+  template = "listen $${mongo_listen_address}:1234"
+  vars {
+    mongo_listen_address = "${google_compute_instance.test_vm_1.network_interface.address}"
+  }
+}
+
+
+resource "google_compute_instance" "test_vm_1" {
+...
+
+  provisioner "file" {
+    content     = "${data.template_file.test-template.rendered}"
+    destination = "/tmp/test_template"
+  }
+}
+```
+Но получаю ошибку:
+```bash
+$ terraform plan
+
+Error: Error asking for user input: 1 error(s) occurred:
+
+* Cycle: google_compute_instance.test_vm_1, data.template_file.test-template
+```
+
+https://github.com/hashicorp/terraform/issues/16338 - тут говорят что так сделать не получиться.
+>Hi! Unfortunately, this is not a thing you can do: the IP isn't allocated until the server is created, and the server 
+can't be created until the template is created. So if the template can't be created until the IP is allocated, we've got 
+a bit of a catch-22 here. One option may to be use the metadata server in your user_data script to retrieve the IP 
+address as part of the startup of the instance.
+
+Вообще конфигурирование я бы уже делал через коллекцию фактов в паппете + сам паппет. Но хотел бы услышать ваших 
+коментариваев как делать по-феншую.
+В настоящий момент БД закрывается от мира через внешний FW.
 
 ## PS
 P.S. Добавлен скрипт https://github.com/ekalinin/github-markdown-toc для построения меню для упрашения навигация
