@@ -23,13 +23,17 @@ Table of Contents
 
 В данном задание ВМ была разбита на две (по функциональности), ВМ вынесены в модули и созданы два окружения.  
 **Замечание.** stage и prod окружения не будут работать вместе из-за одинаковыех названий ВМ и правил FW. Решеним для меня было бы
-разнести их по разным Проектам в GCP
+разнести их по разным Проектам в GCP  
+Создан **storage-bucket.tf** управление бакитами (google storage) через терраформ путем инсталяции стороннего модуля.
 
 Используемые команды:
 ```bash
 # установка модулей
 terraform get
+# установка плагинов
+terragorm init
 ```
+
 
 ## Несколько VM
 Собираем пакером:
@@ -40,9 +44,10 @@ packer build -var-file=variables.json db.json
 ```
 
 ## ДЗ *
-На вкладке https://console.cloud.google.com/storage/browser?project=infra-188921 создаем сегмент
+На вкладке https://console.cloud.google.com/storage/browser?project=infra-188921 создаем сегмент (сторадж)
+TODO поискать как создать storage через gcloud
 
-Сделано только в **stage**, создан файл backend.tf с содержимым:
+Сделано только в **stage**, создан файл **backend.tf** с содержимым:
 ```hcl-terraform
 terraform {
   backend "gcs" {
@@ -50,7 +55,7 @@ terraform {
   }
 }
 ```
-Можно создать минимальную конфигурацию, тогда имя бакета запросит в консоли при первом вызове `terrafom init`.
+Можно создать минимальную конфигурацию, тогда имя бакета будет запрошено в консоли при первом вызове `terrafom init`.
 ```hcl-terraform
 terraform {
   backend "gcs" {
@@ -74,6 +79,83 @@ Lock Info:
   Created:   2018-01-03 08:27:42.541297415 +0000 UTC
   Info:
 ```
+
+## ДЗ **
+Задание как обычно с подвохом, т.к. я копировал примеру из слайда, то не использовал connection, из-за чего не работал provisioner
+```hcl-terraform
+  connection {
+    type        = "ssh"
+    user        = "appuser"
+    private_key = "${file(var.private_key_path)}"
+  }
+```
+
+При вывозе моделей добавлены следующие опции
+```hcl-terraform
+module "app" {
+...
+  private_key_path = "${var.private_key_path}"
+  db_address      = "${module.db.db_internal_ip}"
+
+}
+module "db" {
+...
+  private_key_path = "${var.private_key_path}"
+}
+```
+
+В module/app добавлен **provisioner'ы** для сетапа приложения, адрес БД подставляется через теплейт.  
+```hcl-terraform
+data "template_file" "pumaservice" {
+  template = "${file("${path.module}/files/puma.service.tpl")}"
+
+  vars {
+    db_address = "${var.db_address}"
+  }
+}
+...
+resource "google_compute_instance" "app" {
+...
+  provisioner "file" {
+    content = "${data.template_file.pumaservice.rendered}"
+    destination = "/tmp/puma.service"
+  }
+
+  provisioner "remote-exec" {
+    script = "${path.module}/files/deploy.sh"
+  }
+```
+В module/db добавлен **provisioner'ы** для деплоя конфига монги и ее перезапуска
+```hcl-terraform
+data "template_file" "mongod-config" {
+  template = "${file("${path.module}/files/mongod.conf.tpl")}"
+
+  vars {
+    #mongo_listen_address = "${var.mongo_listen_address}"
+    #mongo_listen_address = "${google_compute_instance.db.network_interface.0.network_ip}"
+    # я не смог в конфиге монги указать IP 10/8 самого инстанса
+    mongo_listen_address = "0.0.0.0"
+  }
+}
+...
+resource "google_compute_instance" "db" {
+...
+  provisioner "file" {
+    content = "${data.template_file.mongod-config.rendered}"
+    destination = "/tmp/mongod.conf"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mv /tmp/mongod.conf /etc/mongod.conf",
+      "sudo systemctl restart mongod",
+    ]
+  }
+```
+
+Т.е. была идея повесить могу на адрес 10/8 и резрешить доступ к БД по 10-й сети. Но я не понял пока как в теплейт в модулей передать
+IP интсанса, я ловил ошибку закольцованности пемеменных. Вообще конфигурирование я бы уже делал через коллекцию фактов в паппете + сам паппет.  
+В настоящий момент БД закрывается от мира через FW.
 
 ## PS
 P.S. Добавлен скрипт https://github.com/ekalinin/github-markdown-toc для построения меню для упрашения навигация

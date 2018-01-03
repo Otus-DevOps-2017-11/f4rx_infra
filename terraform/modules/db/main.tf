@@ -1,3 +1,14 @@
+data "template_file" "mongod-config" {
+  template = "${file("${path.module}/files/mongod.conf.tpl")}"
+
+  vars {
+    #mongo_listen_address = "${var.mongo_listen_address}"
+    #mongo_listen_address = "${google_compute_instance.db.network_interface.0.network_ip}"
+    # я не смог в конфиге монги указать IP самого инстанса
+    mongo_listen_address = "0.0.0.0"
+  }
+}
+
 resource "google_compute_instance" "db" {
   name         = "reddit-db"
   machine_type = "g1-small"
@@ -17,6 +28,24 @@ resource "google_compute_instance" "db" {
 
   metadata {
     sshKeys = "appuser:${file(var.public_key_path)}"
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "appuser"
+    private_key = "${file(var.private_key_path)}"
+  }
+
+  provisioner "file" {
+    content     = "${data.template_file.mongod-config.rendered}"
+    destination = "/tmp/mongod.conf"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mv /tmp/mongod.conf /etc/mongod.conf",
+      "sudo systemctl restart mongod",
+    ]
   }
 }
 
