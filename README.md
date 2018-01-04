@@ -33,6 +33,14 @@ Table of Contents
 разнести их по разным Проектам в GCP  
 Создан **storage-bucket.tf** управление бакитами (google storage) через терраформ путем инсталяции стороннего модуля.
 
+Результат работы поедставлен в виде модулей (modulss/app, modules/db, modules/vpc) и двух энвариментов/стендов/контуров
+prod/stage  
+Запуск проект происходит в директории stage/prod. Перед запуском можно скопировать файл с переменными terraform.tvars.example
+в terraform.tvars и задать переменную **project**. В случае со стендом stage нужно еще создать бакет в консоли GCP
+и указать бакет в переменной backend_gcp_backet для использования Google Storage в качестве хранилиза стейтов 
+(для совместной работы). Переменну bucket в бекенде нельзя параметризовать, поэтому нужно изменить значение в **backend.tf**
+до первого запуска.
+
 Используемые команды:
 ```bash
 # установка модулей
@@ -41,6 +49,11 @@ terraform get
 terragorm init
 ```
 
+График зависимостей
+```bash
+terraform graph | dot -Tpng > graph.png
+```
+![График зависимостей](images/graph.png?raw=true "График зависимостей")
 
 ## Несколько VM
 Собираем пакером:
@@ -59,6 +72,7 @@ TODO поискать как создать storage через gcloud
 terraform {
   backend "gcs" {
     bucket = "otus-terraform-stepanenko"
+    # bucket = "${var.backend_gcp_backet}"
   }
 }
 ```
