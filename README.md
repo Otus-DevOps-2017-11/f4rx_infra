@@ -175,6 +175,10 @@ resource "google_compute_instance" "db" {
 ### Идея которая не взлетела
 Тут была идея сделать связь между app и монгой через интернал сеть (10/8) и сделать темплейт с конфигом монги, где 
 listen будет на локальном адресе (10/8). 
+Точнее связь между Апп и БД идет через 10-ю сеть и так. Наш фаерволл с target/source tag работает только в 10-й сети.
+https://serverfault.com/questions/650519/gce-firewall-with-source-tags  
+https://stackoverflow.com/questions/36724452/firewall-rules-with-tags-not-working-properly?rq=1
+
 Попробовал собрать такую конструкцию, 
 ```hcl-terraform
 data "template_file" "test-template" {
