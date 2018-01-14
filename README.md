@@ -30,6 +30,116 @@ Table of Contents
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
+# HW 11 Ansible-2
+
+## Основное задание
+
+Отключил в терраформе блоки провижининга, отвечающие за деплой в рамках ДЗ-08 со звездочкой.
+
+Команды
+```bash
+$ ansible-playbook reddit_app.yml --check --limit db
+
+PLAY [Configure hosts & deploy application] ********
+
+TASK [Gathering Facts] *****************************
+ok: [dbserver]
+
+TASK [Change mongo config file] ********************
+changed: [dbserver]
+
+RUNNING HANDLER [restart mongod] *******************
+changed: [dbserver]
+
+PLAY RECAP *****************************************
+dbserver                   : ok=3    changed=2    unreachable=0    failed=0
+
+
+
+$ ansible-playbook reddit_app.yml --limit db
+
+PLAY [Configure hosts & deploy application] ********
+
+TASK [Gathering Facts] *****************************
+ok: [dbserver]
+
+TASK [Change mongo config file] ********************
+changed: [dbserver]
+
+RUNNING HANDLER [restart mongod] *******************
+changed: [dbserver]
+
+PLAY RECAP *****************************************
+dbserver                   : ok=3    changed=2    unreachable=0    failed=0
+
+$ ansible-playbook reddit_app.yml --check --limit app --tags app-tag
+```
+
+После разбиения на плеи
+
+```bash
+ansible-playbook reddit_app2.yml --tags db-tag --check
+
+ansible-playbook reddit_app2.yml --tags db-tag 
+```
+
+## Packer
+
+Замечание, пакер работает только при развернутом окружение из терраформа, т.к. там создается правило фаервола, которое
+позволяет зайти на 22-й порт по ssh. Т.е. тег навешивать мы тут умеем, но правила еще нет.
+
+В **packer_db.yaml** моя эсперемент, чтобы не указывать **-name**. Считаю лишним писать какое-то пояснение типа "создаю 
+файл" и вызывать модуль file touch.
+
+```bash
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra (ansible-2●●)
+$ packer build -var-file=packer/variables.json packer/app.json
+...
+==> Builds finished. The artifacts of successful builds are:
+--> googlecompute: A disk image was created: reddit-app-base-1515955437
+
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra (ansible-2●●)
+$ packer build -var-file=packer/variables.json packer/db.json
+...
+==> Builds finished. The artifacts of successful builds are:
+--> googlecompute: A disk image was created: reddit-db-base-1515959151
+```
+
+Я не нашел в логах как проверить точно из какого образа создан инстанс, если мы используем image family. Поэтому добавил
+такое задание:
+```yaml
+  vars:
+    date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+...
+    - name: Set Date
+      lineinfile:
+        path: /root/build_date
+        line: "{{ date }}"
+```
+
+Теперь можно получить непосредственно из ОС дату билда.
+
+Пересоздаем терраформом стенд и выполняем энсибл
+```bash
+ansible-playbook site.yml --check
+ansible-playbook site.yml
+...
+appserver                  : ok=9    changed=7    unreachable=0    failed=0
+dbserver                   : ok=3    changed=2    unreachable=0    failed=0
+```
+
+Проверяем в браузере, все ок.
+
+Проверяем, что билд свежий
+```bash
+$ ansible  all -m command -a "cat /root/build_date" --become
+dbserver | SUCCESS | rc=0 >>
+20180114-2334
+
+appserver | SUCCESS | rc=0 >>
+20180114-2329
+```
+
 
 # HW 10 Ansible-1
 
