@@ -1,5 +1,5 @@
-terraform {
-  backend "gcs" {
-    bucket = "otus-terraform-stepanenko"
-  }
-}
+//terraform {
+//  backend "gcs" {
+//    bucket = "otus-terraform-stepanenko"
+//  }
+//}
