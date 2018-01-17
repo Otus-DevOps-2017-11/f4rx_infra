@@ -1,5 +1,230 @@
 # Aleksey Stepanenko
-# HW 8
+Table of Contents
+=================
+
+   * [Aleksey Stepanenko](#aleksey-stepanenko)
+   * [Table of Contents](#table-of-contents)
+   * [HW 9 Terraform-2](#hw-9-terraform-2)
+      * [Несколько VM](#Несколько-vm)
+      * [ДЗ * (google storage для хранения стейтов)](#ДЗ--google-storage-для-хранения-стейтов)
+      * [ДЗ ** (использование теплейтов системных конфигов в модулях)](#ДЗ--использование-теплейтов-системных-конфигов-в-модулях)
+         * [Основная часть](#Основная-часть)
+         * [Идея которая не взлетела](#Идея-которая-не-взлетела)
+      * [PS](#ps)
+   * [HW 8 Terraform-1](#hw-8-terraform-1)
+      * [ДЗ](#ДЗ)
+      * [ДЗ *](#ДЗ-)
+      * [ДЗ **](#ДЗ--1)
+   * [HW 7 Packer](#hw-7-packer)
+      * [ДЗ 1](#ДЗ-1)
+      * [ДЗ *](#ДЗ--2)
+      * [ДЗ **](#ДЗ--3)
+   * [HW 6](#hw-6)
+   * [HW 5](#hw-5)
+      * [Otus DevOps HW 5 by Aleksey Stepanenko](#otus-devops-hw-5-by-aleksey-stepanenko)
+         * [Описание стенда](#Описание-стенда)
+         * [ДЗ со слайда 36](#ДЗ-со-слайда-36)
+
+
+# HW 9 Terraform-2
+
+В данном задание ВМ была разбита на две (по функциональности), ВМ вынесены в модули и созданы два окружения.  
+**Замечание.** stage и prod окружения не будут работать вместе из-за одинаковыех названий ВМ и правил FW. Решеним для меня было бы
+разнести их по разным Проектам в GCP  
+Создан **storage-bucket.tf** управление бакитами (google storage) через терраформ путем инсталяции стороннего модуля.
+
+Результат работы поедставлен в виде модулей (modulss/app, modules/db, modules/vpc) и двух энвариментов/стендов/контуров
+prod/stage  
+Запуск проект происходит в директории stage/prod. Перед запуском можно скопировать файл с переменными terraform.tvars.example
+в terraform.tvars и задать переменную **project**. В случае со стендом stage нужно еще создать бакет в консоли GCP
+и указать бакет в переменной backend_gcp_backet для использования Google Storage в качестве хранилиза стейтов 
+(для совместной работы). Переменну bucket в бекенде нельзя параметризовать, поэтому нужно изменить значение в **backend.tf**
+до первого запуска.
+
+Используемые команды:
+```bash
+# установка модулей
+terraform get
+# установка плагинов
+terragorm init
+```
+
+График зависимостей
+```bash
+terraform graph | dot -Tpng > graph.png
+```
+![График зависимостей](images/graph.png?raw=true "График зависимостей")
+
+## Несколько VM
+Собираем пакером:
+```bash
+cd packer
+packer build -var-file=variables.json app.json
+packer build -var-file=variables.json db.json
+```
+
+## ДЗ * (google storage для хранения стейтов)
+На вкладке https://console.cloud.google.com/storage/browser?project=infra-188921 создаем сегмент (сторадж)
+TODO поискать как создать storage через gcloud
+
+Сделано только в **stage**, создан файл **backend.tf** с содержимым:
+```hcl-terraform
+terraform {
+  backend "gcs" {
+    bucket = "otus-terraform-stepanenko"
+    # bucket = "${var.backend_gcp_backet}"
+  }
+}
+```
+Можно создать минимальную конфигурацию, тогда имя бакета будет запрошено в консоли при первом вызове `terrafom init`.
+```hcl-terraform
+terraform {
+  backend "gcs" {
+  }
+}
+```
+После этого нужно запустить `terraform init`, при этом терраформ спросит - нужно ли локальные конфиги переместить в бакет.
+```hcl-terraform
+terraform init
+```
+
+Если запустить два terraform-процесса одновременно, то сработает лок
+```bash
+Error: Error loading state: writing "gs://otus-terraform-stepanenko/default.tflock" failed: googleapi: Error 412: Precondition Failed, conditionNotMet
+Lock Info:
+  ID:        de6bec7a-ee69-6212-8ac9-82dfc8d04cce
+  Path:
+  Operation: OperationTypeApply
+  Who:       f3ex@MacBook-Pro-f3ex.local
+  Version:   0.11.1
+  Created:   2018-01-03 08:27:42.541297415 +0000 UTC
+  Info:
+```
+
+## ДЗ ** (использование теплейтов системных конфигов в модулях)
+### Основная часть
+Задание как обычно с подвохом, т.к. я копировал примеру из слайда, то не использовал connection, из-за чего не работал provisioner
+```hcl-terraform
+  connection {
+    type        = "ssh"
+    user        = "appuser"
+    private_key = "${file(var.private_key_path)}"
+  }
+```
+
+При вывозе моделей добавлены следующие опции
+```hcl-terraform
+module "app" {
+...
+  private_key_path = "${var.private_key_path}"
+  db_address      = "${module.db.db_internal_ip}"
+
+}
+module "db" {
+...
+  private_key_path = "${var.private_key_path}"
+}
+```
+
+В module/app добавлен **provisioner'ы** для сетапа приложения, адрес БД подставляется через теплейт.  
+```hcl-terraform
+data "template_file" "pumaservice" {
+  template = "${file("${path.module}/files/puma.service.tpl")}"
+
+  vars {
+    db_address = "${var.db_address}"
+  }
+}
+...
+resource "google_compute_instance" "app" {
+...
+  provisioner "file" {
+    content = "${data.template_file.pumaservice.rendered}"
+    destination = "/tmp/puma.service"
+  }
+
+  provisioner "remote-exec" {
+    script = "${path.module}/files/deploy.sh"
+  }
+```
+В module/db добавлен **provisioner'ы** для деплоя конфига монги и ее перезапуска
+```hcl-terraform
+data "template_file" "mongod-config" {
+  template = "${file("${path.module}/files/mongod.conf.tpl")}"
+
+  vars {
+    mongo_listen_address = "0.0.0.0"
+  }
+}
+...
+resource "google_compute_instance" "db" {
+...
+  provisioner "file" {
+    content = "${data.template_file.mongod-config.rendered}"
+    destination = "/tmp/mongod.conf"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mv /tmp/mongod.conf /etc/mongod.conf",
+      "sudo systemctl restart mongod",
+    ]
+  }
+```
+
+### Идея которая не взлетела
+Тут была идея сделать связь между app и монгой через интернал сеть (10/8) и сделать темплейт с конфигом монги, где 
+listen будет на локальном адресе (10/8). 
+Точнее связь между Апп и БД идет через 10-ю сеть и так. Наш фаерволл с target/source tags работает только в 10-й сети.
+https://serverfault.com/questions/650519/gce-firewall-with-source-tags  
+https://stackoverflow.com/questions/36724452/firewall-rules-with-tags-not-working-properly?rq=1
+
+Попробовал собрать такую конструкцию, 
+```hcl-terraform
+data "template_file" "test-template" {
+  template = "listen $${mongo_listen_address}:1234"
+  vars {
+    mongo_listen_address = "${google_compute_instance.test_vm_1.network_interface.address}"
+  }
+}
+
+
+resource "google_compute_instance" "test_vm_1" {
+...
+
+  provisioner "file" {
+    content     = "${data.template_file.test-template.rendered}"
+    destination = "/tmp/test_template"
+  }
+}
+```
+Но получаю ошибку:
+```bash
+$ terraform plan
+
+Error: Error asking for user input: 1 error(s) occurred:
+
+* Cycle: google_compute_instance.test_vm_1, data.template_file.test-template
+```
+
+https://github.com/hashicorp/terraform/issues/16338 - тут говорят что так сделать не получиться.
+>Hi! Unfortunately, this is not a thing you can do: the IP isn't allocated until the server is created, and the server 
+can't be created until the template is created. So if the template can't be created until the IP is allocated, we've got 
+a bit of a catch-22 here. One option may to be use the metadata server in your user_data script to retrieve the IP 
+address as part of the startup of the instance.
+
+Вообще конфигурирование я бы уже делал через коллекцию фактов в паппете + сам паппет. Но хотел бы услышать ваших 
+коментариваев как делать по-феншую.
+В настоящий момент БД закрывается от мира через внешний FW.
+
+## PS
+P.S. Добавлен скрипт https://github.com/ekalinin/github-markdown-toc для построения меню для упрашения навигация
+по старому материалу, т.к. текста в Readme уже много
+
+P.P.S. Нельзя пользоваться пакером до вызова терраформа, т.к. у пакера не будет ssh к ВМ. **TODO** Нужно будет сделать 
+какой-нибудь отдельный тег для пакера с ssh и навешивать его на ВМ его во время создания образа
+
+# HW 8 Terraform-1
 
 
 Все команды выполняются в директории _terraform_
@@ -163,7 +388,7 @@ $ curl -v -sLN `terraform output lb_ip` 2>&1 | head -20
   <meta name=viewport content="initial-scale=1, minimum-scale=1, width=device-width">
 ```
 
-# HW 7
+# HW 7 Packer
 
 ## ДЗ 1
 Сборка образа packer'ом (тут и далее в директории packer)
