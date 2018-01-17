@@ -6,3 +6,5 @@ packer/variables.json
 .terraform/
 terraform/crash.log
 .terraform.tfstate.lock.info
+*.retry
+Infra-4b1fd2ba1600.json

@@ -1,0 +1,31 @@
+---
+- name: Install and enable MongoDB
+  hosts: all
+  become: true
+  vars:
+    date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+  tasks:
+    - apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: EA312927
+
+    - apt_repository:
+        repo: deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse
+        update_cache: yes
+        state: present
+
+    - apt:
+        name: mongodb-org
+        update_cache: yes
+
+    - systemd:
+        name: mongod
+        enabled: yes
+        state: started
+
+    # Я не нашел в логах как проверить точно из какого образа создан инстанс, если мы используем image family
+    - name: Set Date in /root/build_date
+      lineinfile:
+        path: /root/build_date
+        create: yes
+        line: "{{ date }}"
