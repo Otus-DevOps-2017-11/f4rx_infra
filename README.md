@@ -4,6 +4,9 @@ Table of Contents
 
    * [Aleksey Stepanenko](#aleksey-stepanenko)
    * [Table of Contents](#table-of-contents)
+   * [HW 10 Ansible-1](#hw-10-ansible-1)
+      * [Основное задание](#Основное-задание)
+      * [ДЗ* (json-inventory)](#ДЗ-json-inventory)
    * [HW 9 Terraform-2](#hw-9-terraform-2)
       * [Несколько VM](#Несколько-vm)
       * [ДЗ * (google storage для хранения стейтов)](#ДЗ--google-storage-для-хранения-стейтов)
@@ -25,6 +28,115 @@ Table of Contents
          * [Описание стенда](#Описание-стенда)
          * [ДЗ со слайда 36](#ДЗ-со-слайда-36)
 
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
+
+
+# HW 10 Ansible-1
+
+## Основное задание
+С Ansbible чутка знаком, но я работаю с паппетом (в трух компаниях где я был - был только паппет). Каких-то 
+вопросов/замечаний у меня не возникло.
+
+Установка Ansible
+```bash
+sudo -H pip install -r requirements.txt
+```
+
+Все хосты доступны
+```bash
+$ ansible all -m ping
+dbserver | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+appserver | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
+
+Напишу команды для себя, для истории
+```bash
+$ ansible all -m command -a uptime
+appserver | SUCCESS | rc=0 >>
+ 07:52:52 up 11:39,  1 user,  load average: 0.00, 0.00, 0.00
+
+dbserver | SUCCESS | rc=0 >>
+ 07:52:52 up 11:58,  1 user,  load average: 0.00, 0.01, 0.00
+```
+
+```bash
+$ ansible app -m shell -a 'ruby -v; bundler -v'
+appserver | SUCCESS | rc=0 >>
+ruby 2.3.1p112 (2016-04-26) [x86_64-linux-gnu]
+Bundler version 1.11.2
+```
+
+## ДЗ* (json-inventory)
+
+Я сначала пошел создавать json файл, даже скачал конвертилку (вот этого товарища https://gist.github.com/sivel/3c0745243787b9899486).  
+Собственно применить json файл нельзя - я получал ошибку, что пробует плагин ini или yaml, json там не было. И я решил 
+проверить плагины инвентаря.
+```bash
+$ ansible-doc -t inventory -l
+advanced_host_list Parses a 'host list' with ranges
+constructed        Uses Jinja2 to construct vars and groups based on existing inventory.
+host_list          Parses a 'host list' string
+ini                Uses an Ansible INI file as inventory source.
+openstack          OpenStack inventory source
+script             Executes an inventory script that returns JSON
+virtualbox         virtualbox inventory source
+yaml               Uses a specifically YAML file as inventory source.
+```
+
+И тут нет json, а для  json они хотят скрипт, который возвращает json. В общем я подправил скрипт, чтобы он загружал 
+данные из инвентори файла, а не из аргумента, и все заработало.
+
+```bash
+$ diff 1.py inventory2json.py
+diff --git a/1.py b/inventory2json.py
+old mode 100644
+new mode 100755
+index bf43167..29cb702
+--- a/1.py
++++ b/inventory2json.py
+@@ -1,3 +1,5 @@
++#!/usr/bin/env python
++
+ import sys
+ import json
+
+@@ -11,13 +13,15 @@ except ImportError:
+     from ansible.inventory import Inventory
+     A24 = False
+
++inventory_file = "./inventory"
++
+ loader = DataLoader()
+ if A24:
+-    inventory = InventoryManager(loader, [sys.argv[1]])
++    inventory = InventoryManager(loader, inventory_file)
+     inventory.parse_sources()
+ else:
+     variable_manager = VariableManager()
+-    inventory = Inventory(loader, variable_manager, sys.argv[1])
++    inventory = Inventory(loader, variable_manager, inventory_file)
+     inventory.parse_inventory(inventory.host_list)
+
+ out = {'_meta': {'hostvars': {}}}
+```
+
+```bash
+$ ansible -i inventory2json.py all -m ping
+appserver | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+dbserver | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
 
 # HW 9 Terraform-2
 
