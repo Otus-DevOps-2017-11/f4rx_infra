@@ -1,4 +1,5 @@
 # Aleksey Stepanenko
+[![Build Status](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra.svg?branch=ansible-3)](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra)
 Table of Contents
 =================
 
@@ -35,6 +36,102 @@ Table of Contents
          * [ДЗ со слайда 36](#ДЗ-со-слайда-36)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
+
+# HW 12 Ansible-3
+
+```bash
+APP_IP=$(terraform output | grep app_external_ip | awk '{print $3}') &&\
+DB_IP=$(terraform output | grep db_external_ip | awk '{print $3}') &&\
+sed -i '' "s/appserver ansible_host=.*$/appserver ansible_host=${APP_IP}/g" ../../ansible/inventory &&\
+sed -i '' "s/dbserver ansible_host=.*$/dbserver ansible_host=${DB_IP}/g" ../../ansible/inventory
+```
+
+```bash
+ENV_APP="stage" && \
+APP_IP=$(terraform output | grep app_external_ip | awk '{print $3}') &&\
+DB_IP=$(terraform output | grep db_external_ip | awk '{print $3}') &&\
+DB_INTERNAL_IP=$(terraform output | grep db_internal_ip | awk '{print $3}') &&\
+sed -i '' "s/appserver ansible_host=.*$/appserver ansible_host=${APP_IP}/g" ../../ansible/environments/${ENV_APP}/inventory &&\
+sed -i '' "s/dbserver ansible_host=.*$/dbserver ansible_host=${DB_IP}/g" ../../ansible/environments/${ENV_APP}/inventory &&\
+sed -i '' "s/db_host:.*$/db_host: ${DB_INTERNAL_IP}/g" ../../ansible/environments/${ENV_APP}/group_vars/app
+```
+
+```bash
+$ ansible-galaxy -h
+$ ansible-galaxy init app
+$ ansible-galaxy init db
+$ ansible-playbook site.yml --check
+$ ansible-playbook site.yml
+
+
+$ ansible-playbook -i environments/prod/inventory deploy.yml 
+
+
+$ ansible-playbook -i environments/prod/inventory playbooks/site.yml --check
+$ ansible-playbook -i environments/prod/inventory playbooks/site.yml
+
+
+```
+
+Правило для 80-го порта
+```hcl-terraform
+resource "google_compute_firewall" "firewall_puma_nginx_80" {
+  name    = "allow-puma-nginx-80"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["reddit-app"]
+}
+```
+
+## ДЗ * (Dynamic Inventory + Environment)
+
+Я решил использовать динамический инвентарь от терраформа.
+
+```bash
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-3●●●)
+$ environments/stage/terraform-inventory --list
+{"app":["35.195.92.60"],"app.0":["35.195.92.60"],"db":["104.199.18.115"],"db.0":["104.199.18.115"],"type_google_compute_instance":["35.195.92.60","104.199.18.115"]}%
+
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-3●●●)
+$ ansible-playbook -i environments/stage/terraform-inventory playbooks/site.yml
+....
+TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
+ok: [104.199.18.115] => {
+    "msg": "This host is in stage environment!!!"
+}
+...
+
+# Пересоздаем окружение в терраформе  проверяем
+
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-3●●●)
+$ ansible-playbook -i environments/prod/terraform-inventory playbooks/site.yml
+...
+TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
+ok: [104.199.18.115] => {
+    "msg": "This host is in prod environment!!!"
+}
+```
+
+```bash
+TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
+ok: [104.199.18.115] => {
+    "msg": "This host is in local environment!!!"
+}
+```
+
+## HW 12 Travis-CI
+
+https://github.com/mschuchard/linter-packer-validate/blob/master/.travis.yml
+
+$ travis lint .travis.yml
+Warnings for .travis.yml:
+[x] has multiple install entries, keeping last entry
 
 # HW 11 Ansible-2
 
