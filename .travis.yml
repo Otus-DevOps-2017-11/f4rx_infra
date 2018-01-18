@@ -50,6 +50,7 @@ before_script:
     private_key_path = "~/.ssh/appuser"
     EOF
   - cat ./terraform.tfvars
+  - cp ./terraform.tfvars ../prod/
 
 script:
   - cd ${WD}
