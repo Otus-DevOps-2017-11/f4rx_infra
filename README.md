@@ -1,9 +1,14 @@
-# [![Build Status](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra.svg?branch=ansible-3)](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra)Aleksey Stepanenko 
+[![Build Status](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra.svg?branch=ansible-3)](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra)
+
+# Aleksey Stepanenko 
 Table of Contents
 =================
 
    * [Aleksey Stepanenko](#aleksey-stepanenko)
    * [Table of Contents](#table-of-contents)
+   * [HW 12 Ansible-3](#hw-12-ansible-3)
+      * [ДЗ * (Dynamic Inventory   Environment)](#ДЗ--dynamic-inventory--environment)
+      * [ДЗ ** (Travis-CI)](#ДЗ--travis-ci)
    * [HW 11 Ansible-2](#hw-11-ansible-2)
       * [Основное задание](#Основное-задание)
       * [Packer](#packer)
@@ -38,6 +43,11 @@ Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
 # HW 12 Ansible-3
 
+Каких-то вопросов у меня не возникло. Просто идти по методичке.  
+Но в голова начинает гудеть от кучи каталог и структур. С этим ничено не поделать - надо привыкать и хорошо, что материал
+подан порциями.
+
+Команда, чтобы из вывода терраформа записать адреса хосттов в инвентори
 ```bash
 APP_IP=$(terraform output | grep app_external_ip | awk '{print $3}') &&\
 DB_IP=$(terraform output | grep db_external_ip | awk '{print $3}') &&\
@@ -45,6 +55,8 @@ sed -i '' "s/appserver ansible_host=.*$/appserver ansible_host=${APP_IP}/g" ../.
 sed -i '' "s/dbserver ansible_host=.*$/dbserver ansible_host=${DB_IP}/g" ../../ansible/inventory
 ```
 
+Команда, чтобы из вывода терраформа записать адреса хосттов в инвентори, когда мы работает с окружениями. Надо поменять 
+ENV_APP перед копированием.
 ```bash
 ENV_APP="stage" && \
 APP_IP=$(terraform output | grep app_external_ip | awk '{print $3}') &&\
@@ -55,6 +67,7 @@ sed -i '' "s/dbserver ansible_host=.*$/dbserver ansible_host=${DB_IP}/g" ../../a
 sed -i '' "s/db_host:.*$/db_host: ${DB_INTERNAL_IP}/g" ../../ansible/environments/${ENV_APP}/group_vars/app
 ```
 
+Команды для себя
 ```bash
 $ ansible-galaxy -h
 $ ansible-galaxy init app
@@ -69,10 +82,10 @@ $ ansible-playbook -i environments/prod/inventory deploy.yml
 $ ansible-playbook -i environments/prod/inventory playbooks/site.yml --check
 $ ansible-playbook -i environments/prod/inventory playbooks/site.yml
 
-
+$ ansible-playbook playbooks/site.yml
 ```
 
-Правило для 80-го порта
+Правило в терраформе для nginx и 80-го порта
 ```hcl-terraform
 resource "google_compute_firewall" "firewall_puma_nginx_80" {
   name    = "allow-puma-nginx-80"
@@ -92,6 +105,27 @@ resource "google_compute_firewall" "firewall_puma_nginx_80" {
 
 Я решил использовать динамический инвентарь от терраформа.
 
+Сначала я не понял задание, прогнал в первый раз энсибл и увидел надпись, что у нас хост в **local environment** и понял
+что надо как-то заставить работать group_vars.
+```bash
+TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
+ok: [104.199.18.115] => {
+    "msg": "This host is in local environment!!!"
+}
+``` 
+В доке написано, что все работает, если запускать инвентори из директории 
+с переменными. Можно сделать ссылку, но мне кажется ссылка будет зависить от Mac/Linux - поэтому я решил сделать простенький
+враппер на баше - environments/\[prod|stage]/terraform-inventory
+ANSIBLE_ENV - имя окружения. Можно в принципе взять из каталога, в котором лежит terraform-inventory, но решил пока 
+не усложнять
+```bash
+#!/usr/bin/env bash
+ANSIBLE_ENV="stage"
+TF_STATE=../terraform/${ANSIBLE_ENV}/terraform.tfstate terraform-inventory $1
+
+```
+
+Создаем окружение через terraform и проверяем
 ```bash
 f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-3●●●)
 $ environments/stage/terraform-inventory --list
@@ -117,20 +151,34 @@ ok: [104.199.18.115] => {
 }
 ```
 
-```bash
-TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
-ok: [104.199.18.115] => {
-    "msg": "This host is in local environment!!!"
-}
+
+
+## ДЗ ** (Travis-CI)
+
+С одной стороны задание простое, но пришлось потратить время на поиск примеров и вообще перечитать хабр и офф доки по тревису.  
+Так же были проблемы с билдом, оставил комментарии в файле .travis.yaml
+
+Очень много времени потратил на такую конструкцию:
+```yaml
+  - |
+    cat > ./terraform.tfvars << '  EOF'
+    project = "infra-188921"
+    public_key_path = "~/.ssh/appuser.pub"
+    private_key_path = "~/.ssh/appuser"
+    EOF
 ```
+EOF не срабатывал, т.к. в последней строке было '  EOF', т.е. два пробела, а блок влево сдвинуть нельзя. Так что тут << '  EOF' это костылик.
+Хотя люди так делают https://github.com/mneuhaus/Famelo.Messaging/blob/master/.travis.yml 
 
-## HW 12 Travis-CI
-
-https://github.com/mschuchard/linter-packer-validate/blob/master/.travis.yml
-
+Линтер для тревиса
+```bash
 $ travis lint .travis.yml
 Warnings for .travis.yml:
 [x] has multiple install entries, keeping last entry
+```
+
+Ссылочка для себя:
+* https://github.com/mschuchard/linter-packer-validate/blob/master/.travis.yml
 
 # HW 11 Ansible-2
 

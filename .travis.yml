@@ -42,7 +42,7 @@ before_script:
   - touch ~/.ssh/appuser.pub && touch ~/.ssh/appuser
   - cd ${WD}/terraform/stage
   # Почему-то не работает с EOF в конце, почему-то слово EOF он дописывал в файл. Точнее оно записывалось как "  EOF"
-  # Хотя люди так делают
+  # Хотя люди так делают https://github.com/mneuhaus/Famelo.Messaging/blob/master/.travis.yml
   - |
     cat > ./terraform.tfvars << '  EOF'
     project = "infra-188921"
