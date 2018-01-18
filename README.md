@@ -1,5 +1,4 @@
-# Aleksey Stepanenko
-[![Build Status](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra.svg?branch=ansible-3)](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra)
+# [![Build Status](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra.svg?branch=ansible-3)](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra)Aleksey Stepanenko 
 Table of Contents
 =================
 
