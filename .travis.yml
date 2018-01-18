@@ -13,9 +13,10 @@ language: python
 python: "2.7"
 
 # https://docs.travis-ci.com/user/installing-dependencies/
+# Какая-то ерунда в билдах у тревиса. Это костыли с их форума
 before_install:
   - sudo rm -vf /etc/apt/sources.list.d/*riak*
-#  - sudo apt -qq update
+  - sudo apt -qq update
   - pwd
 
 install:
@@ -52,11 +53,15 @@ before_script:
 
 script:
   - cd ${WD}
+  # Check Packer
   - /home/travis/bin/packer validate -var-file=packer/variables.json.example packer/db.json
+  # Check Ansible
   - cd ${WD}/ansible
   # ansible-lint при отсутствующем файле вернет 0 в exit status, так что отдельно проверяем наличие файла
   - test -f playbooks/site.yml
   - ansible-lint playbooks/site.yml
+  # Check terraform validate && tflint
   - cd ${WD}/terraform/stage && terraform init && terraform validate
   - tflint --error-with-issues
-
+  - cd ${WD}/terraform/prod && terraform init && terraform validate
+  - tflint --error-with-issues
