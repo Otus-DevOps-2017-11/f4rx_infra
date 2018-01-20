@@ -12,6 +12,12 @@ dist: trusty
 language: python
 python: "2.7"
 
+# safelist
+branches:
+  only:
+  - master
+  - ansible-3
+
 # https://docs.travis-ci.com/user/installing-dependencies/
 # Какая-то ерунда в билдах у тревиса. Это костыли с их форума
 before_install:
