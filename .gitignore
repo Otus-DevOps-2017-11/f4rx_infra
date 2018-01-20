@@ -17,3 +17,5 @@ jdauphant.nginx
 *.pyc
 .molecule
 .cache
+
+env
