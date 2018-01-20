@@ -26,12 +26,41 @@ Vagrant.configure("2") do |config|
     app.vm.provision "ansible" do |ansible|
       ansible.playbook = "playbooks/site.yml"
       ansible.groups = {
-      "app" => ["appserver"],
-      "app:vars" => { "db_host" => "10.10.10.10"}
+        "app" => ["appserver"],
+        "app:vars" => {
+          "db_host" => "10.10.10.10",
+        }
       }
+# Я не понял почему секция с nginx_sites не работает в ansible.groups, тут работает. В документации нашел только
+# extra_vars (string or hash) - Pass additional variables (with highest priority) to the playbook.
+# This parameter can be a path to a JSON or YAML file, or a hash.
       ansible.extra_vars = {
-        "deploy_user" => "ubuntu"
+        "deploy_user" => "ubuntu",
+        "nginx_sites": {
+          "default": [
+              "listen 80",
+              "server_name \"reddit\"",
+              "location / {  proxy_pass http://127.0.0.1:9292; }"
+            ]
+    	}
       }
     end
   end
 end
+
+#nginx_sites:
+#  default:
+#    - listen 80
+#    - server_name "reddit"
+#    - location / {
+#        proxy_pass http://127.0.0.1:9292;
+#      }
+
+
+#ansible.extra_vars = {
+#  ntp_server: "pool.ntp.org",
+#  nginx: {
+#    port: 8008,
+#    workers: 4
+#  }
+#}
