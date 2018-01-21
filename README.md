@@ -46,6 +46,17 @@ Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
 virtualenv -p python2.7 env
 
+
+## ДЗ **
+https://github.com/Artemmkin/test-ansible-role-with-travis
+https://gist.github.com/f4rx/5a23d06557bc2e476b8fa99e61b8a1f1
+
+molecule init scenario --scenario-name default -r hw13_ansbile_db_repo -d gce
+
+## ДЗ ***
+https://devops-team-otus.slack.com/messages/C8C9R4J1J/details/
+
+
 # HW 12 Ansible-3
 
 ## Основное задание

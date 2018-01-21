@@ -19,3 +19,6 @@ jdauphant.nginx
 .cache
 
 env
+
+ansible/roles/db
+ansible/roles/db_old

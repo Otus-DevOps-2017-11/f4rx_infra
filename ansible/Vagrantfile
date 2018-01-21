@@ -34,6 +34,7 @@ Vagrant.configure("2") do |config|
 # Я не понял почему секция с nginx_sites не работает в ansible.groups, тут работает. В документации нашел только
 # extra_vars (string or hash) - Pass additional variables (with highest priority) to the playbook.
 # This parameter can be a path to a JSON or YAML file, or a hash.
+# Просто прогнал данные из yaml через конвертер в json и вставил сюда
       ansible.extra_vars = {
         "deploy_user" => "ubuntu",
         "nginx_sites": {

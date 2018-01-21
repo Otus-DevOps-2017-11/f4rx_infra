@@ -311,8 +311,12 @@ class GceInventory(object):
         args[1] = os.environ.get('GCE_PEM_FILE_PATH', args[1])
         args[1] = os.environ.get('GCE_CREDENTIALS_FILE_PATH', args[1])
 
+	print args
+
         kwargs['project'] = os.environ.get('GCE_PROJECT', kwargs['project'])
         kwargs['datacenter'] = os.environ.get('GCE_ZONE', kwargs['datacenter'])
+
+	print kwargs
 
         # Retrieve and return the GCE driver.
         gce = get_driver(Provider.GCE)(*args, **kwargs)

@@ -1,5 +1,10 @@
+[![Build Status](https://travis-ci.org/f4rx/annsible_db_role_test_otus.svg?branch=master)](https://travis-ci.org/f4rx/annsible_db_role_test_otus)
+
 Role Name
 =========
+
+molecule init scenario --scenario-name default  -r hw13_ansbile_db_repo -d gce
+
 
 A brief description of the role goes here.
 
