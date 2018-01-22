@@ -4,8 +4,14 @@ Table of Contents
 
    * [Aleksey Stepanenko](#aleksey-stepanenko)
    * [Table of Contents](#table-of-contents)
-   * [HW 10 Ansible-1](#hw-10-ansible-1)
+   * [HW 11 Ansible-2](#hw-11-ansible-2)
       * [Основное задание](#Основное-задание)
+      * [Packer](#packer)
+      * [ДЗ * (Dynamic Inventory GCP)](#ДЗ--dynamic-inventory-gcp)
+         * [GCE Module](#gce-module)
+         * [terraform-inventory](#terraform-inventory)
+   * [HW 10 Ansible-1](#hw-10-ansible-1)
+      * [Основное задание](#Основное-задание-1)
       * [ДЗ* (json-inventory)](#ДЗ-json-inventory)
    * [HW 9 Terraform-2](#hw-9-terraform-2)
       * [Несколько VM](#Несколько-vm)
@@ -30,6 +36,257 @@ Table of Contents
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
+# HW 11 Ansible-2
+
+## Основное задание
+
+Отключил в терраформе блоки провижининга, отвечающие за деплой приложения в рамках ДЗ-08 со звездочкой.
+
+Задание сделано по инструкции. Основные минусы вижу на текущем этапе:
+* все yaml файлы в одно директории, что усложняет чтение и понимание текущей структуры
+* мешанина в templates/files. Я бы перешел к чему-нибудь такому "tempalates/[group|host|module|playbook]/\<FS\>/file.conf", к примеру
+"templates/mongo_db/etc/mongod.conf.j2"
+* Важные конфиги, точнее переменные, которые относятся к хостам, задаем в плейбуке. К примеру внутреннеий адрес DB-сервера. Я бы вынес его повыше. (Наверно это будет дальше)
+* IP-адрес DB-сервера мы указываем руками.
+
+Каких-то трудностей не возникло, но задание хоть и хорошее, но несколько нудное и тяжеловато, в голове нужно много чего
+держать. Потратил где-то часов 6 на него.
+
+Как собрать проект
+```bash
+# Собираем инфрастуктуру
+cd terraform/stage
+
+terraform apply
+..
+Apply complete! Resources: 6 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+app_external_ip = 104.199.83.33
+db_external_ip = 104.199.24.20
+db_internal_ip = 10.132.0.2
+
+
+# Запускаем Anisble
+cd ../../ansible
+
+# Правим IP хостов
+vim inventory
+
+# Проверяем, что хосты доступны
+ansible all -m ping
+dbserver | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+appserver | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+
+# Проверяем и применяем конфигурацию
+ansible-playbook site.yml --check
+
+ansible-playbook site.yml
+...
+appserver                  : ok=9    changed=7    unreachable=0    failed=0
+dbserver                   : ok=3    changed=2    unreachable=0    failed=0
+
+# Проверяем в браузере, что все ок
+http://104.199.83.33:9292
+
+# Разбираем стенд
+cd ../terraform/stage
+
+terraform destroy
+```
+
+Команды
+```bash
+$ ansible-playbook reddit_app.yml --check --limit db
+
+PLAY [Configure hosts & deploy application] ********
+
+TASK [Gathering Facts] *****************************
+ok: [dbserver]
+
+TASK [Change mongo config file] ********************
+changed: [dbserver]
+
+RUNNING HANDLER [restart mongod] *******************
+changed: [dbserver]
+
+PLAY RECAP *****************************************
+dbserver                   : ok=3    changed=2    unreachable=0    failed=0
+
+
+
+$ ansible-playbook reddit_app.yml --limit db
+
+PLAY [Configure hosts & deploy application] ********
+
+TASK [Gathering Facts] *****************************
+ok: [dbserver]
+
+TASK [Change mongo config file] ********************
+changed: [dbserver]
+
+RUNNING HANDLER [restart mongod] *******************
+changed: [dbserver]
+
+PLAY RECAP *****************************************
+dbserver                   : ok=3    changed=2    unreachable=0    failed=0
+
+$ ansible-playbook reddit_app.yml --check --limit app --tags app-tag
+```
+
+После разбиения на плеи
+
+```bash
+ansible-playbook reddit_app2.yml --tags db-tag --check
+
+ansible-playbook reddit_app2.yml --tags db-tag 
+```
+
+## Packer
+
+Замечание, пакер работает только при развернутом окружение из терраформа, т.к. там создается правило фаервола, которое
+позволяет зайти на 22-й порт по ssh. Т.е. тег навешивать мы тут умеем, но правила еще нет.
+
+В **packer_db.yaml** мой эксперимент, чтобы не указывать **-name**. Считаю лишним писать какое-то пояснение типа "создаю 
+файл" и вызывать модуль file touch.
+
+```bash
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra (ansible-2●●)
+$ packer build -var-file=packer/variables.json packer/app.json
+...
+==> Builds finished. The artifacts of successful builds are:
+--> googlecompute: A disk image was created: reddit-app-base-1515955437
+
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra (ansible-2●●)
+$ packer build -var-file=packer/variables.json packer/db.json
+...
+==> Builds finished. The artifacts of successful builds are:
+--> googlecompute: A disk image was created: reddit-db-base-1515959151
+```
+
+Я не нашел в логах GCP как проверить точно из какого образа создан инстанс, если мы используем image family в пакере. 
+Поэтому добавил такое задание:
+```yaml
+  vars:
+    date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+...
+    - name: Set Date
+      lineinfile:
+        path: /root/build_date
+        line: "{{ date }}"
+```
+
+Теперь можно получить непосредственно из ОС дату билда.
+
+Пересоздаем терраформом стенд и выполняем энсибл
+```bash
+ansible-playbook site.yml --check
+ansible-playbook site.yml
+...
+appserver                  : ok=9    changed=7    unreachable=0    failed=0
+dbserver                   : ok=3    changed=2    unreachable=0    failed=0
+```
+
+Проверяем в браузере, все ок.
+
+Проверяем, что билд свежий
+```bash
+$ ansible  all -m command -a "cat /root/build_date" --become
+dbserver | SUCCESS | rc=0 >>
+20180114-2334
+
+appserver | SUCCESS | rc=0 >>
+20180114-2329
+```
+
+## ДЗ * (Dynamic Inventory GCP)
+
+Немного не понял задание.  
+* Что именно иследовать ?
+* Какие юзкейсы мы хотим охватить ?
+* Какую проблемы мы вообще решаем ?
+* Что мы хотим вообще тут получить ?
+* Что у нас сейча болит ? Я могу перечислить в текущем проекте моментов ~10, которые плохо сделаны в текущей реализации.
+
+### GCE Module
+Офф. дока http://docs.ansible.com/ansible/latest/guide_gce.html
+
+Сам скрипт доступен в офф репе.
+```bash
+https://raw.githubusercontent.com/ansible/ansible/stable-2.4/contrib/inventory/gce.py
+```
+
+На маке мне пришлось установить pycrypto
+```bash
+pip install pycrypto
+```
+
+модуль поддерживает три режима авторизации - создания secret.py, ini-файла или переменных окружения.  Я сделал через
+переменные окружения. gcerc и gce.py приложены к репозиторию.
+```bash
+$ cat gcerc
+export GCE_EMAIL=6..@developer.gserviceaccount.com
+export GCE_PROJECT=infra-188921
+export GCE_CREDENTIALS_FILE_PATH=./Infra-4..0.json
+
+$ source gcerc
+```
+
+```bash
+$ python ./gce.py --list
+{"europe-west1-d": ["reddit-app", "reddit-db"], "tag_reddit-db": ["reddit-db"], "_meta": {"stats": {"cache_used": false, "inventory_load_time": 0.7172539234161377}, "hostvars": {"reddit-app": {"gce_uuid": "51af2f511545be90d02b6c7c9ee5878c2d9d251e", "gce_public_ip": "104.199.83.33", "ansible_ssh_host": "104.199.83.33", "gce_private_ip": "10.132.0.3", "gce_id": "4870079332018946333", "gce_image": "reddit-app-base-1515961598", "gce_description": null, "gce_machine_type": "g1-small", "gce_subnetwork": "default", "gce_tags": ["reddit-app"], "gce_name": "reddit-app", "gce_zone": "europe-west1-d", "gce_status": "RUNNING", "gce_network": "default", "gce_metadata": {"sshKeys": "appuser:ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB+wDIhMjsBXFuepcUXNQiqGJosR3RD6tfK5m6iT8lDU9rdYjYMHHpa3IxN7djETzT+JUlAD+w3hy1H1wqpkeZwAzIu/tNgh901gIIGtHkgWuQ8b9mzI5kTSlYtQ1bdLK28uMxOjt0KBOHP64pDYVzRD7GKNVTXPYefq70iBvEgkq4M1NcZlUmP32OwVZrliZrM8JsdnmmiurjP30NvrAQSoxB+UrEfodT4qgVcQzotp2HcYHy2FLkImlcHszs9ngyy64ldqJVIVfbxLBGQqhDeEWvhh5emVdzNGgCtVb2vuz5JXxENDZm9map/vt9gTl6sB/+IJRHLCdSVkRnWk1lS/6Pbfvdsl3AImJRCYGHYaq7pM2U3FNA4TTMY2vJAsjo8uhg098twUNj3MAkfHVUoaoPoNQDt7RLA59hbf00YmeumhZz73jBQGHiVH3jq2E79nYDkzWhr8Kne/TxDaUExsw8rKZpBjY8WE2K9sIhYLoEsPklJExxZDOeYBlFADhynbK2XEoD1vtYpfge7ITgcmUIh91/K341qkNfVnUDIoN5lV+SeYN28c/HJEKXGGPsog1/vCBWPC23z22K8Pe+WqBHba8jbG+OItlyBh00trQe9mEnB5XxSabPeDXJv3bfnh1lOT5V9X+Wjfx0SlD7v69XcWDWnMhIf2dzQw== appuser\n"}}, "reddit-db": {"gce_uuid": "f05d5b75d2486ba336d35d98c46a3ca4bcabe3fd", "gce_public_ip": "104.199.24.20", "ansible_ssh_host": "104.199.24.20", "gce_private_ip": "10.132.0.2", "gce_id": "2408157962887889160", "gce_image": "reddit-db-base-1515961898", "gce_description": null, "gce_machine_type": "g1-small", "gce_subnetwork": "default", "gce_tags": ["reddit-db"], "gce_name": "reddit-db", "gce_zone": "europe-west1-d", "gce_status": "RUNNING", "gce_network": "default", "gce_metadata": {"sshKeys": "appuser:ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAB+wDIhMjsBXFuepcUXNQiqGJosR3RD6tfK5m6iT8lDU9rdYjYMHHpa3IxN7djETzT+JUlAD+w3hy1H1wqpkeZwAzIu/tNgh901gIIGtHkgWuQ8b9mzI5kTSlYtQ1bdLK28uMxOjt0KBOHP64pDYVzRD7GKNVTXPYefq70iBvEgkq4M1NcZlUmP32OwVZrliZrM8JsdnmmiurjP30NvrAQSoxB+UrEfodT4qgVcQzotp2HcYHy2FLkImlcHszs9ngyy64ldqJVIVfbxLBGQqhDeEWvhh5emVdzNGgCtVb2vuz5JXxENDZm9map/vt9gTl6sB/+IJRHLCdSVkRnWk1lS/6Pbfvdsl3AImJRCYGHYaq7pM2U3FNA4TTMY2vJAsjo8uhg098twUNj3MAkfHVUoaoPoNQDt7RLA59hbf00YmeumhZz73jBQGHiVH3jq2E79nYDkzWhr8Kne/TxDaUExsw8rKZpBjY8WE2K9sIhYLoEsPklJExxZDOeYBlFADhynbK2XEoD1vtYpfge7ITgcmUIh91/K341qkNfVnUDIoN5lV+SeYN28c/HJEKXGGPsog1/vCBWPC23z22K8Pe+WqBHba8jbG+OItlyBh00trQe9mEnB5XxSabPeDXJv3bfnh1lOT5V9X+Wjfx0SlD7v69XcWDWnMhIf2dzQw== appuser\n"}}}}, "tag_reddit-app": ["reddit-app"], "10.132.0.2": ["reddit-db"], "status_running": ["reddit-app", "reddit-db"], "g1-small": ["reddit-app", "reddit-db"], "104.199.83.33": ["reddit-app"], "104.199.24.20": ["reddit-db"], "10.132.0.3": ["reddit-app"], "reddit-app-base-1515961598": ["reddit-app"], "reddit-db-base-1515961898": ["reddit-db"], "network_default": ["reddit-app", "reddit-db"]}
+```
+
+```bash
+$ ansible all -i gce.py -m ping
+reddit-db | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+reddit-app | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
+
+В таком сценарии не вижу какого-то практического применения, ну разве только получить список хостов. Т.е. в таком подходе
+получается мы как бы уже после узнаем об инфраструктуре. Т.е. правая рука не знает, что делает левая. Я бы тогда больше 
+топил за то, чтобы и хосты создавать/поднимать через ansible.
+
+### terraform-inventory
+У коллеги (enkov) подсмотрел ссылку на https://github.com/adammck/terraform-inventory  
+**Замечание** Т.к. для работы нужен state file, то я отключил хранение стейтов в бакете.  
+
+Установка на маке
+```bash
+$ brew install terraform-inventory
+```
+Проверяем
+```bash
+$ terraform-inventory --list
+{"app":["35.195.212.69"],"app.0":["35.195.212.69"],"db":["146.148.123.181"],"db.0":["146.148.123.181"],"type_google_compute_instance":["35.195.212.69","146.148.123.181"]}
+```
+
+```bash
+$ TF_STATE=../terraform/stage/terraform.tfstate ansible -i /usr/local/bin/terraform-inventory all -m ping
+35.195.212.69 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+146.148.123.181 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
+
+Решение кажется более интересным. Но пока не вижу сценариев для использования.
 
 # HW 10 Ansible-1
 

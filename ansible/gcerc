@@ -1,0 +1,3 @@
+export GCE_EMAIL=638823464907-compute@developer.gserviceaccount.com
+export GCE_PROJECT=infra-188921
+export GCE_CREDENTIALS_FILE_PATH=./Infra-4b1fd2ba1600.json
