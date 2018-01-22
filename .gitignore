@@ -21,4 +21,4 @@ jdauphant.nginx
 env
 
 ansible/roles/db
-ansible/roles/db_old
+# ansible/roles/db_old
