@@ -5,10 +5,10 @@
   gather_facts: false
   vars:
     date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
-#  roles:
-#  - { role: app, tags: [ 'ruby' ] }
+  roles:
+    - app
   tasks:
-  - include: ../roles/app/tasks/main.yml
+#  - include: ../roles/app/tasks/main.yml
 ## Так теги в роли не пробрасываются
 ### https://github.com/ansible/ansible-modules-core/issues/5077
 ### https://github.com/ansible/ansible/issues/34196
