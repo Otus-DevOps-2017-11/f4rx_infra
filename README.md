@@ -134,11 +134,81 @@ molecule --debug verify
 molecule destroy
 ```
 
-Packer - не сделано!
-#TODO доделать
+**Packer**. Как и в прошлом задание я ставлю отметку в времени билда.  
+Задание тоже заняло многов времени, т.к. с тегами не получалось добиться желаемого поведения 
+(Переписка в слаке https://otus-devops.slack.com/archives/C8BA5BJ4W/p1516656935000343 )
+```json
+  "provisioners":[
+    {
+      "type":"ansible",
+      "playbook_file":"ansible/playbooks/packer_app.yml",
+      "extra_arguments": ["--tags","build-date,ruby"],
+      "ansible_env_vars": ["ANSIBLE_ROLES_PATH={{ pwd }}/ansible/roles"]
+    }
+  ]
+```
+
+Примери плейбука:
+```yaml
+
+- name: Packer build App image
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+# Так не работает, даже в 2.3
+#  roles:
+#  - { role: app, tags: [ 'ruby' ] }
+# Работает только так
+  tasks:
+  - include: ../roles/app/tasks/main.yml
+## Так теги в роли не пробрасываются
+### https://github.com/ansible/ansible-modules-core/issues/5077
+### https://github.com/ansible/ansible/issues/34196
+##  - name: Role app
+##    include_role:
+##       name: app
+###    tags:
+###      - always
+###      - ruby
+  - name: Set build Date in /root/build_date
+    lineinfile:
+      path: /root/build_date
+      create: yes
+      line: "{{ date }}"
+    tags:
+      - build-date
+```
+
 ```bash
 packer build -var-file=packer/variables.json packer/app.json
 packer build -var-file=packer/variables.json packer/db.json
+```
+
+Так я отлаживал проблему с тегами (нужно развернуть через terraform стенд)
+```bash
+ansible-playbook -i environments/stage/terraform-inventory --limit app playbooks/packer_app.yml --check --tags build-date,ruby
+```
+
+Собираем стенд через terraform и проверяем:
+```bash
+$ cd terraform/stage
+$ terraform apply
+...
+app_external_ip = 35.195.128.48
+db_external_ip = 35.187.23.245
+db_internal_ip = 10.132.0.2
+
+$ ssh -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null appuser@35.195.128.48 -t "sudo cat /root/build_date"
+Warning: Permanently added '35.195.128.48' (ECDSA) to the list of known hosts.
+20180123-0105
+Connection to 35.195.128.48 closed.
+
+$ ssh -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null appuser@35.187.23.245 -t "sudo cat /root/build_date"
+Warning: Permanently added '35.187.23.245' (ECDSA) to the list of known hosts.
+20180122-2317
+Connection to 35.187.23.245 closed.
 ```
 
 Команды vargrant
@@ -153,9 +223,6 @@ vagrant provision VM_NAME
 vagrant destroy [VN_NAME] -f 
 ```
 
-
-
-virtualenv -p python2.7 env
 ## ДЗ * (nginx)
 В Vagrantfile расширена секция ansible.extra_varsю
 ```bash
@@ -190,8 +257,12 @@ virtualenv -p python2.7 env
 
 Роль DB вынесена в репозиторий https://github.com/f4rx/annsible_db_role_test_otus  
 Используемые ссылки
-* https://github.com/Artemmkin/test-ansible-role-with-travis
 * https://gist.github.com/f4rx/5a23d06557bc2e476b8fa99e61b8a1f1
+* https://github.com/Artemmkin/test-ansible-role-with-travis
+
+Собственно по инструкции выше - создаем сервисный аккаунт и его данные (логины/пароли) шифруем и передаем в travis. Во второй 
+инструкции есть пример конфига travis, travis запустит команды molecule - по созданию инстанса в GCP и по тестированию 
+роли.
 
 Я скопировал роль db в отдельный репозиторий, удалил каталог molecule, и заново его переинизиализировал. В качестве роли 
 нужно указать имя репозитория
@@ -204,7 +275,7 @@ molecule init scenario --scenario-name default -r hw13_ansbile_db_repo -d gce
 * molecule/default/playbook.yml
 * molecule/default/tests/test_default.py - тут собственно сами тесты
 
-Конфиг travis - https://github.com/f4rx/annsible_db_role_test_otus/blob/master/.travis.yml
+Конфиг travis **.travis.yml** - https://github.com/f4rx/annsible_db_role_test_otus/blob/master/.travis.yml
 
 В .**/ansible/environments/prod/requirements.yml** и **./ansible/environments/stage/requirements.yml** добавлено:
 ```yaml
