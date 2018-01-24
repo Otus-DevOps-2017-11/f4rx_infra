@@ -1,0 +1,26 @@
+---
+#Мы должны выполнить две команды
+#apt update и apt install -y ruby-full ruby-bundler build-essential
+#В Ansible апдейт можно использовать в модуле apt
+#update_cache - Run the equivalent of apt-get update before the operation. Can be run as part of the package installation or as a separate step.
+- name: Install Ruby
+  hosts: all
+  become: true
+  vars:
+    date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+  tasks:
+    - name: Install Ruby
+      apt:
+        name: "{{ item }}"
+        update_cache: yes
+      with_items:
+          - ruby-full
+          - ruby-bundler
+          - build-essential
+
+    # Я не нашел в логах как проверить точно из какого образа создан инстанс, если мы используем image family
+    - name: Set Date in /root/build_date
+      lineinfile:
+        path: /root/build_date
+        create: yes
+        line: "{{ date }}"

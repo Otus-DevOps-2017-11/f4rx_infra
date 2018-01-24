@@ -1,0 +1,6 @@
+---
+# Начиная с версии 2.4 инструкцию include можно заменить на import_playbook
+#- include: db.yml
+- import_playbook: db.yml
+- import_playbook: app.yml
+- import_playbook: deploy.yml

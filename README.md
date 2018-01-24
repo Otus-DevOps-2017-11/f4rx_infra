@@ -1,17 +1,28 @@
-# Aleksey Stepanenko
+[![Build Status](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra.svg?branch=ansible-3)](https://travis-ci.org/Otus-DevOps-2017-11/f4rx_infra)
+
+# Aleksey Stepanenko 
 Table of Contents
 =================
 
    * [Aleksey Stepanenko](#aleksey-stepanenko)
    * [Table of Contents](#table-of-contents)
-   * [HW 11 Ansible-2](#hw-11-ansible-2)
+   * [HW 13 Ansible-4](#hw-13-ansible-4)
       * [Основное задание](#Основное-задание)
+      * [ДЗ * (nginx)](#ДЗ--nginx)
+      * [ДЗ ** (travis, тестирование ansible роли в GCE)](#ДЗ--travis-тестирование-ansible-роли-в-gce)
+      * [ДЗ *** (Нотификация в Слак)](#ДЗ--Нотификация-в-Слак)
+   * [HW 12 Ansible-3](#hw-12-ansible-3)
+      * [Основное задание](#Основное-задание-1)
+      * [ДЗ * (Dynamic Inventory   Environment)](#ДЗ--dynamic-inventory--environment)
+      * [ДЗ ** (Travis-CI)](#ДЗ--travis-ci)
+   * [HW 11 Ansible-2](#hw-11-ansible-2)
+      * [Основное задание](#Основное-задание-2)
       * [Packer](#packer)
       * [ДЗ * (Dynamic Inventory GCP)](#ДЗ--dynamic-inventory-gcp)
          * [GCE Module](#gce-module)
          * [terraform-inventory](#terraform-inventory)
    * [HW 10 Ansible-1](#hw-10-ansible-1)
-      * [Основное задание](#Основное-задание-1)
+      * [Основное задание](#Основное-задание-3)
       * [ДЗ* (json-inventory)](#ДЗ-json-inventory)
    * [HW 9 Terraform-2](#hw-9-terraform-2)
       * [Несколько VM](#Несколько-vm)
@@ -35,6 +46,394 @@ Table of Contents
          * [ДЗ со слайда 36](#ДЗ-со-слайда-36)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
+
+# HW 13 Ansible-4
+## Основное задание
+
+Тестирование Ansible-ролей через vagrant.
+
+Как собрать стенд и проверить  
+**Внимание** в environments/*/requirements.yml добавлены новые зависимости, подробнее в ДЗ **  
+Деплой приложения
+```bash
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-4●)
+$ vagrant up
+Bringing machine 'dbserver' up with 'virtualbox' provider...
+Bringing machine 'appserver' up with 'virtualbox' provider...
+==> dbserver: Importing base box 'ubuntu/xenial64'...
+...
+
+# Открыть приложение в браузере
+$ open http://10.10.10.20:9292
+
+# У меня настроен nginx в рамках ДЗ*, поэтому можно проверить на 80-м порту
+$ open http://10.10.10.20
+```
+
+**virualenv**  
+Содержимое файла requirements.yml
+```bash
+ansible>=2.4
+molecule>=2.6
+testinfra>=1.10
+python-vagrant>=0.5.15
+```
+
+Создание окружения, из директории репозитория:
+```bash
+# Создаем окружение
+virtualenv -p python2.7 env
+
+# Активируем окружением
+source env/bin/activate
+
+# Устанавливаем зависимости
+pip install -r ansible/requirements.txt
+
+# Если нужно выйти из окружения:
+deactivate
+```
+
+Тестирование роли  
+Я сделал задание ДЗ ** по выносу роли db в отдельный репозиторий, но в основном задание проверяется через vagrant, 
+а там через GCE. Но хотелось бы оставить для себя какую-то документацию-напоминалку по тестированию роли через 
+vagrant. Роль из основного ДЗ оставил как db_old.
+```bash
+cd ansible/roles
+rm -rf db
+cp -r db_old db
+cd db
+# Запускаем virtual env
+#TODO описать отдельно
+source ../../env/bin/activate
+# Поднимаем стенда
+molecule create 
+
+$ molecule list
+Instance Name    Driver Name    Provisioner Name    Scenario Name    Created    Converged
+---------------  -------------  ------------------  ---------------  ---------  -----------
+instance         Vagrant        Ansible             default          True       False
+(env)
+
+$ molecule login -h instance
+...
+Last login: Mon Jan 22 08:33:33 2018 from 10.0.2.2
+ubuntu@instance:~$
+
+molecule converge
+
+# Запуск теста
+molecule verify 
+...
+    ===================== 3 passed, 2 warnings in 6.53 seconds =====================
+    
+# Можно использовать ключ --debug, хотя в тесте он особо ничего интересного не показывает
+molecule --debug verify
+
+# Разобрать стенда
+molecule destroy
+```
+
+**Packer**. Как и в прошлом задание я ставлю отметку в времени билда.  
+Задание тоже заняло многов времени, т.к. с тегами не получалось добиться желаемого поведения 
+(Переписка в слаке https://otus-devops.slack.com/archives/C8BA5BJ4W/p1516656935000343 )
+```json
+  "provisioners":[
+    {
+      "type":"ansible",
+      "playbook_file":"ansible/playbooks/packer_app.yml",
+      "extra_arguments": ["--tags","build-date,ruby"],
+      "ansible_env_vars": ["ANSIBLE_ROLES_PATH={{ pwd }}/ansible/roles"]
+    }
+  ]
+```
+
+Примери плейбука:
+```yaml
+
+- name: Packer build App image
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+# Так не работает, даже в 2.3
+#  roles:
+#  - { role: app, tags: [ 'ruby' ] }
+# Работает только так
+  tasks:
+  - include: ../roles/app/tasks/main.yml
+## Так теги в роли не пробрасываются
+### https://github.com/ansible/ansible-modules-core/issues/5077
+### https://github.com/ansible/ansible/issues/34196
+##  - name: Role app
+##    include_role:
+##       name: app
+###    tags:
+###      - always
+###      - ruby
+  - name: Set build Date in /root/build_date
+    lineinfile:
+      path: /root/build_date
+      create: yes
+      line: "{{ date }}"
+    tags:
+      - build-date
+```
+
+```bash
+packer build -var-file=packer/variables.json packer/app.json
+packer build -var-file=packer/variables.json packer/db.json
+```
+
+Так я отлаживал проблему с тегами (нужно развернуть через terraform стенд)
+```bash
+ansible-playbook -i environments/stage/terraform-inventory --limit app playbooks/packer_app.yml --check --tags build-date,ruby
+```
+
+Собираем стенд через terraform и проверяем:
+```bash
+$ cd terraform/stage
+$ terraform apply
+...
+app_external_ip = 35.195.128.48
+db_external_ip = 35.187.23.245
+db_internal_ip = 10.132.0.2
+
+$ ssh -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null appuser@35.195.128.48 -t "sudo cat /root/build_date"
+Warning: Permanently added '35.195.128.48' (ECDSA) to the list of known hosts.
+20180123-0105
+Connection to 35.195.128.48 closed.
+
+$ ssh -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null appuser@35.187.23.245 -t "sudo cat /root/build_date"
+Warning: Permanently added '35.187.23.245' (ECDSA) to the list of known hosts.
+20180122-2317
+Connection to 35.187.23.245 closed.
+```
+
+Команды vargrant
+```bash
+vagrant init
+vagrant up [VM_NAME]
+vagrant ssh VM_NAME
+vagrant status
+vagrant box list 
+# Перезапустить блок provision, чтобы не создавать новую ВМ.
+vagrant provision VM_NAME
+vagrant destroy [VN_NAME] -f 
+```
+
+## ДЗ * (nginx)
+В Vagrantfile расширена секция ansible.extra_varsю
+```bash
+# Я не понял почему секция с nginx_sites не работает в ansible.groups, а работает только в ansible.extra_vars. В документации нашел только
+# extra_vars (string or hash) - Pass additional variables (with highest priority) to the playbook.
+# This parameter can be a path to a JSON or YAML file, or a hash.
+# Просто прогнал данные из yaml через конвертер в json и вставил сюда
+      ansible.extra_vars = {
+        "deploy_user" => "ubuntu",
+        "nginx_sites": {
+          "default": [
+              "listen 80",
+              "server_name \"reddit\"",
+              "location / {  proxy_pass http://127.0.0.1:9292; }"
+            ]
+    	}
+      }
+```
+
+## ДЗ ** (travis, тестирование ansible роли в GCE)
+Задание заняло очень много времени. После удаление сервисного аккаунта, созданного в предыдущем задание, я начал получать
+ошибку при работе с терраформом, gcloud, что не может найти аккаунт. Предлагаю в чате ребутнуть API в консоли GCP.
+  Но API не отключался - нажимаю остановить - он не отключается. Удалил проект, создал новый, создаю сервисный аккаунт - 
+а оне не работает: ни через anisble gce.py, ни через molecule. Очень долго провозился, вернулся на основной проект agile-being-138120, 
+который Гугл создает по-дефолту как я понимаю, сделал тоже самое и все заработало. Ушло на это дело часа 4-5. 
+Суммарно на это ДЗ я потратил 3 дня.
+
+Еще хотел отметить, что тяжело дебажить - получается большой стек новых технологий travis - molecule - GCP - TestInfra - role.  
+  И на каждом шаге могут быть ошибки, магия и непонимание как это работает. Тема очень обширная и на тестирование 
+нужно наверно делать отдельно урока 4)) Т.е. я сделать-то сделал, но понимание как это работает не пришло.
+
+
+Роль DB вынесена в репозиторий https://github.com/f4rx/annsible_db_role_test_otus  
+Используемые ссылки
+* https://gist.github.com/f4rx/5a23d06557bc2e476b8fa99e61b8a1f1
+* https://github.com/Artemmkin/test-ansible-role-with-travis
+
+Собственно по инструкции выше - создаем сервисный аккаунт и его данные (логины/пароли) шифруем и передаем в travis. Во второй 
+инструкции есть пример конфига travis, travis запустит команды molecule - по созданию инстанса в GCP и по тестированию 
+роли.
+
+Я скопировал роль db в отдельный репозиторий, удалил каталог molecule, и заново его переинизиализировал. В качестве роли 
+нужно указать имя репозитория
+```bash
+molecule init scenario --scenario-name default -r hw13_ansbile_db_repo -d gce
+```
+
+Пишу по памяти, при тестирование новой роли проверить и сравнить следующией файлы (сейчас не помню какие ручки крутил):
+* molecule/default/molecule.yml
+* molecule/default/playbook.yml
+* molecule/default/tests/test_default.py - тут собственно сами тесты
+
+Конфиг travis **.travis.yml** - https://github.com/f4rx/annsible_db_role_test_otus/blob/master/.travis.yml
+
+В .**/ansible/environments/prod/requirements.yml** и **./ansible/environments/stage/requirements.yml** добавлено:
+```yaml
+- src: https://github.com/f4rx/annsible_db_role_test_otus
+  version: master
+  name: db
+```
+
+Для установки этой роли в проекте нужно выполнить команду для соответствующего окружения:
+```bash
+ansible-galaxy install -r environments/stage/requirements.yml
+ansible-galaxy install -r environments/prod/requirements.yml
+```
+
+## ДЗ *** (Нотификация в Слак)
+Сложностей не возникло, канал, куда идут нотификации - https://devops-team-otus.slack.com/messages/C8C9R4J1J/details/
+![Нотификации в Slack'e](images/travis_slack.png?raw=true "Нотификации в Slack'e")
+
+# HW 12 Ansible-3
+
+## Основное задание
+
+Каких-то вопросов у меня не возникло. Просто идти по методичке.  
+Но в голова начинает гудеть от кучи каталог и структур. С этим ничено не поделать - надо привыкать и хорошо, что материал
+подан порциями.
+
+Команда, чтобы из вывода терраформа записать адреса хосттов в инвентори
+```bash
+APP_IP=$(terraform output | grep app_external_ip | awk '{print $3}') &&\
+DB_IP=$(terraform output | grep db_external_ip | awk '{print $3}') &&\
+sed -i '' "s/appserver ansible_host=.*$/appserver ansible_host=${APP_IP}/g" ../../ansible/inventory &&\
+sed -i '' "s/dbserver ansible_host=.*$/dbserver ansible_host=${DB_IP}/g" ../../ansible/inventory
+```
+
+Команда, чтобы из вывода терраформа записать адреса хосттов в инвентори, когда мы работает с окружениями. Надо поменять 
+ENV_APP перед копированием.
+```bash
+ENV_APP="stage" && \
+APP_IP=$(terraform output | grep app_external_ip | awk '{print $3}') &&\
+DB_IP=$(terraform output | grep db_external_ip | awk '{print $3}') &&\
+DB_INTERNAL_IP=$(terraform output | grep db_internal_ip | awk '{print $3}') &&\
+sed -i '' "s/appserver ansible_host=.*$/appserver ansible_host=${APP_IP}/g" ../../ansible/environments/${ENV_APP}/inventory &&\
+sed -i '' "s/dbserver ansible_host=.*$/dbserver ansible_host=${DB_IP}/g" ../../ansible/environments/${ENV_APP}/inventory &&\
+sed -i '' "s/db_host:.*$/db_host: ${DB_INTERNAL_IP}/g" ../../ansible/environments/${ENV_APP}/group_vars/app
+```
+
+Команды для себя
+```bash
+$ ansible-galaxy -h
+$ ansible-galaxy init app
+$ ansible-galaxy init db
+$ ansible-playbook site.yml --check
+$ ansible-playbook site.yml
+
+
+$ ansible-playbook -i environments/prod/inventory deploy.yml 
+
+
+$ ansible-playbook -i environments/prod/inventory playbooks/site.yml --check
+$ ansible-playbook -i environments/prod/inventory playbooks/site.yml
+
+$ ansible-playbook playbooks/site.yml
+```
+
+Правило в терраформе для nginx и 80-го порта
+```hcl-terraform
+resource "google_compute_firewall" "firewall_puma_nginx_80" {
+  name    = "allow-puma-nginx-80"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["reddit-app"]
+}
+```
+
+## ДЗ * (Dynamic Inventory + Environment)
+
+Я решил использовать динамический инвентарь от терраформа.
+
+Сначала я не понял задание, прогнал в первый раз энсибл и увидел надпись, что у нас хост в **local environment** и понял
+что надо как-то заставить работать group_vars.
+```bash
+TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
+ok: [104.199.18.115] => {
+    "msg": "This host is in local environment!!!"
+}
+``` 
+В доке написано, что все работает, если запускать инвентори из директории 
+с переменными. Можно сделать ссылку, но мне кажется ссылка будет зависить от Mac/Linux - поэтому я решил сделать простенький
+враппер на баше - environments/\[prod|stage]/terraform-inventory
+ANSIBLE_ENV - имя окружения. Можно в принципе взять из каталога, в котором лежит terraform-inventory, но решил пока 
+не усложнять
+```bash
+#!/usr/bin/env bash
+ANSIBLE_ENV="stage"
+TF_STATE=../terraform/${ANSIBLE_ENV}/terraform.tfstate terraform-inventory $1
+
+```
+
+Создаем окружение через terraform и проверяем
+```bash
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-3●●●)
+$ environments/stage/terraform-inventory --list
+{"app":["35.195.92.60"],"app.0":["35.195.92.60"],"db":["104.199.18.115"],"db.0":["104.199.18.115"],"type_google_compute_instance":["35.195.92.60","104.199.18.115"]}%
+
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-3●●●)
+$ ansible-playbook -i environments/stage/terraform-inventory playbooks/site.yml
+....
+TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
+ok: [104.199.18.115] => {
+    "msg": "This host is in stage environment!!!"
+}
+...
+
+# Пересоздаем окружение в терраформе  проверяем
+
+f3ex at MacBook-Pro-f3ex in ~/otus/DevOps/hw05-06_GCP/f4rx_infra/ansible (ansible-3●●●)
+$ ansible-playbook -i environments/prod/terraform-inventory playbooks/site.yml
+...
+TASK [db : Show info about the env this host belongs to] ***************************************************************************************************************************************************
+ok: [104.199.18.115] => {
+    "msg": "This host is in prod environment!!!"
+}
+```
+
+
+
+## ДЗ ** (Travis-CI)
+
+С одной стороны задание простое, но пришлось потратить время на поиск примеров и вообще перечитать хабр и офф доки по тревису.  
+Так же были проблемы с билдом, оставил комментарии в файле .travis.yaml
+
+Очень много времени потратил на такую конструкцию:
+```yaml
+  - |
+    cat > ./terraform.tfvars << '  EOF'
+    project = "infra-188921"
+    public_key_path = "~/.ssh/appuser.pub"
+    private_key_path = "~/.ssh/appuser"
+    EOF
+```
+EOF не срабатывал, т.к. в последней строке было '  EOF', т.е. два пробела, а блок влево сдвинуть нельзя. Так что тут << '  EOF' это костылик.
+Хотя люди так делают https://github.com/mneuhaus/Famelo.Messaging/blob/master/.travis.yml 
+
+Линтер для тревиса
+```bash
+$ travis lint .travis.yml
+Warnings for .travis.yml:
+[x] has multiple install entries, keeping last entry
+```
+
+Ссылочка для себя:
+* https://github.com/mschuchard/linter-packer-validate/blob/master/.travis.yml
 
 # HW 11 Ansible-2
 

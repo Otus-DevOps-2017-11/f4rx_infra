@@ -1,0 +1,74 @@
+---
+# https://github.com/travis-ci/docs-travis-ci-com/issues/910
+#language: generic
+#Почему-тому в генерике у меня не работал интернет
+
+# https://docs.travis-ci.com/user/reference/overview/
+sudo: required
+dist: trusty
+# https://blog.travis-ci.com/2017-12-12-new-trusty-images-q4-launch
+#group: deprecated-2017Q4
+
+language: python
+python: "2.7"
+
+# safelist
+branches:
+  only:
+  - master
+  - ansible-3
+
+# https://docs.travis-ci.com/user/installing-dependencies/
+# Какая-то ерунда в билдах у тревиса. Это костыли с их форума
+before_install:
+  - sudo rm -vf /etc/apt/sources.list.d/*riak*
+  - sudo apt -qq update
+  - pwd
+
+install:
+  - sudo apt -y install wget
+  - wget https://releases.hashicorp.com/packer/1.1.3/packer_1.1.3_linux_amd64.zip
+  - mkdir -p /home/travis/bin
+  - unzip packer_1.1.3_linux_amd64.zip -d /home/travis/bin/
+
+  - sudo -H pip install -r ansible/requirements.txt
+  - sudo -H pip install ansible-lint
+
+  - wget https://releases.hashicorp.com/terraform/0.11.1/terraform_0.11.1_linux_amd64.zip
+  - unzip terraform_0.11.1_linux_amd64.zip -d /home/travis/bin/
+
+  - wget https://github.com/wata727/tflint/releases/download/v0.5.4/tflint_linux_amd64.zip
+  - unzip tflint_linux_amd64.zip -d /home/travis/bin/
+
+before_script:
+  - /home/travis/bin/packer --version
+  - pwd
+  # /home/travis/build/Otus-DevOps-2017-11/f4rx_infra
+  - WD=$(pwd)
+  - touch ~/.ssh/appuser.pub && touch ~/.ssh/appuser
+  - cd ${WD}/terraform/stage
+  # Почему-то не работает с EOF в конце, почему-то слово EOF он дописывал в файл. Точнее оно записывалось как "  EOF"
+  # Хотя люди так делают https://github.com/mneuhaus/Famelo.Messaging/blob/master/.travis.yml
+  - |
+    cat > ./terraform.tfvars << '  EOF'
+    project = "infra-188921"
+    public_key_path = "~/.ssh/appuser.pub"
+    private_key_path = "~/.ssh/appuser"
+    EOF
+  - cat ./terraform.tfvars
+  - cp ./terraform.tfvars ../prod/
+
+script:
+  - cd ${WD}
+  # Check Packer
+  - /home/travis/bin/packer validate -var-file=packer/variables.json.example packer/db.json
+  # Check Ansible
+  - cd ${WD}/ansible
+  # ansible-lint при отсутствующем файле вернет 0 в exit status, так что отдельно проверяем наличие файла
+  - test -f playbooks/site.yml
+  - ansible-lint playbooks/site.yml
+  # Check terraform validate && tflint
+  - cd ${WD}/terraform/stage && terraform init && terraform validate
+  - tflint --error-with-issues
+  - cd ${WD}/terraform/prod && terraform init && terraform validate
+  - tflint --error-with-issues
