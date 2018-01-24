@@ -10,3 +10,15 @@ terraform/crash.log
 Infra-4b1fd2ba1600.json
 gh-md-toc
 jdauphant.nginx
+
+# Vagrant & molecule
+.vagrant/
+*.log
+*.pyc
+.molecule
+.cache
+
+env
+
+ansible/roles/db
+# ansible/roles/db_old

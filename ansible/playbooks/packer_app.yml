@@ -1,26 +1,27 @@
 ---
-#Мы должны выполнить две команды
-#apt update и apt install -y ruby-full ruby-bundler build-essential
-#В Ansible апдейт можно использовать в модуле apt
-#update_cache - Run the equivalent of apt-get update before the operation. Can be run as part of the package installation or as a separate step.
-- name: Install Ruby
+- name: Packer build App image
   hosts: all
   become: true
+  gather_facts: false
   vars:
     date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
+  roles:
+    - app
   tasks:
-    - name: Install Ruby
-      apt:
-        name: "{{ item }}"
-        update_cache: yes
-      with_items:
-          - ruby-full
-          - ruby-bundler
-          - build-essential
-
-    # Я не нашел в логах как проверить точно из какого образа создан инстанс, если мы используем image family
-    - name: Set Date in /root/build_date
-      lineinfile:
-        path: /root/build_date
-        create: yes
-        line: "{{ date }}"
+#  - include: ../roles/app/tasks/main.yml
+## Так теги в роли не пробрасываются
+### https://github.com/ansible/ansible-modules-core/issues/5077
+### https://github.com/ansible/ansible/issues/34196
+##  - name: Role app
+##    include_role:
+##       name: app
+###    tags:
+###      - always
+###      - ruby
+  - name: Set build Date in /root/build_date
+    lineinfile:
+      path: /root/build_date
+      create: yes
+      line: "{{ date }}"
+    tags:
+      - build-date

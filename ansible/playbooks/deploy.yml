@@ -1,22 +1,20 @@
----
 - name: Deploy App
   hosts: app
   vars:
-    db_host: 10.132.0.2
+    deploy_user: appuser
+
   tasks:
     - name: Fetch the latest version of application code
       git:
         repo: 'https://github.com/Otus-DevOps-2017-11/reddit.git'
-        dest: /home/appuser/reddit
+        dest: "/home/{{ deploy_user }}/reddit"
         version: monolith
-      tags: deploy-tag
       notify: restart puma
 
-    - name: Bundle install
+    - name: bundle install
       bundler:
         state: present
-        chdir: /home/appuser/reddit
-      tags: deploy-tag
+        chdir: "/home/{{ deploy_user }}/reddit"
 
   handlers:
   - name: restart puma
